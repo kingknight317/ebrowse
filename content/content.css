@@ -1,0 +1,261 @@
+/**
+ * CleanLink & QuickShare - Content Script Styles
+ * Scoped to avoid any collision with webpage styles
+ */
+
+.__cleanlink-pill-container {
+  position: absolute;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(24, 24, 27, 0.92);
+  color: #f4f4f5;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1;
+  user-select: none;
+  pointer-events: auto;
+  transform: translateY(6px);
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.__cleanlink-pill-container.__cleanlink-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.__cleanlink-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fafafa;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.__cleanlink-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.02);
+}
+
+.__cleanlink-pill-btn:active {
+  transform: scale(0.98);
+}
+
+.__cleanlink-pill-btn svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.__cleanlink-pill-shortcut {
+  font-size: 10px;
+  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin-left: 2px;
+}
+
+.__cleanlink-pill-success {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+/* ==========================================================================
+   Pre-Flight Link Radar (Hover Peek Tooltip) Styles
+   ========================================================================== */
+
+.__cleanlink-radar-tooltip {
+  position: fixed;
+  z-index: 2147483647;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(15, 18, 26, 0.94);
+  color: #f8fafc;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 7px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(4px) scale(0.96);
+  transition: opacity 0.14s ease, transform 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.__cleanlink-radar-tooltip.__cleanlink-radar-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* 狀態樣式：付費牆 / 強制登入 (Danger) */
+.__cleanlink-radar-tooltip.__status-paywall {
+  border-color: rgba(239, 68, 68, 0.38);
+  background: rgba(26, 12, 16, 0.95);
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15), 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.__cleanlink-radar-tooltip.__status-paywall .__radar-text {
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+/* 狀態樣式：AI 內容農場 (Warning) */
+.__cleanlink-radar-tooltip.__status-ai_farm {
+  border-color: rgba(245, 158, 11, 0.38);
+  background: rgba(28, 20, 10, 0.95);
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15), 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.__cleanlink-radar-tooltip.__status-ai_farm .__radar-text {
+  color: #fde68a;
+  font-weight: 600;
+}
+
+/* 狀態樣式：正常 (Safe) */
+.__cleanlink-radar-tooltip.__status-safe {
+  border-color: rgba(16, 185, 129, 0.28);
+  background: rgba(10, 24, 18, 0.94);
+}
+
+.__cleanlink-radar-tooltip.__status-safe .__radar-text {
+  color: #a7f3d0;
+  font-weight: 500;
+}
+
+/* 向量 SVG 圖示樣式 (純幾何、零 Emoji) */
+.__cleanlink-radar-svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.__cleanlink-radar-svg.__radar-danger {
+  stroke: #ef4444;
+}
+
+.__cleanlink-radar-svg.__radar-warning {
+  stroke: #f59e0b;
+}
+
+.__cleanlink-radar-svg.__radar-safe {
+  stroke: #10b981;
+}
+
+/* 域名標籤 */
+.__cleanlink-radar-domain {
+  font-size: 10px;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  margin-left: 3px;
+  letter-spacing: -0.2px;
+}
+
+/* ==========================================================================
+   Universal PiP (Picture-in-Picture) Hover Button
+   ========================================================================== */
+
+.__cleanlink-pip-btn {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  padding: 0 !important;
+  background: rgba(28, 25, 23, 0.78) !important;
+  color: #fbfaf8 !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(231, 229, 223, 0.22) !important;
+  border-radius: 7px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  pointer-events: auto !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: scale(0.92) !important;
+  transition: opacity 0.18s cubic-bezier(0, 0, 0.2, 1), transform 0.18s cubic-bezier(0, 0, 0.2, 1), visibility 0.18s ease, background-color 0.10s ease, border-color 0.10s ease !important;
+}
+
+.__cleanlink-pip-btn.__cleanlink-pip-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: scale(1) !important;
+}
+
+.__cleanlink-pip-btn:hover {
+  background: rgba(41, 37, 36, 0.92) !important;
+  border-color: rgba(231, 229, 223, 0.48) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  transform: scale(1.05) !important;
+}
+
+.__cleanlink-pip-btn:active {
+  transform: scale(0.95) !important;
+}
+
+.__cleanlink-pip-btn.__pip-active {
+  background: rgba(180, 83, 9, 0.82) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  color: #ffffff !important;
+}
+
+.__cleanlink-pip-svg {
+  width: 16px !important;
+  height: 16px !important;
+  stroke: currentColor !important;
+  fill: none !important;
+  stroke-width: 2 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+  pointer-events: none !important;
+}
+
+.__cleanlink-pip-svg * {
+  pointer-events: none !important;
+}
+
+.__cleanlink-pip-svg rect[fill="currentColor"] {
+  fill: currentColor !important;
+  stroke: none !important;
+}

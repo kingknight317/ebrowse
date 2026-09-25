@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CleanLink & QuickShare</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- 頂部 Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" class="header-logo-svg" aria-hidden="true">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title" data-i18n="brand.name">CleanLink</span>
+          <span class="brand-badge" data-i18n="brand.badge">QuickShare</span>
+        </div>
+      </div>
+      <button id="btn-batch-toggle" class="header-batch-btn" type="button" data-i18n-aria-label="popup.batchToggleLabel" data-i18n-title="popup.batchToggleTitle" aria-label="切換多分頁批次匯出模式 (快捷鍵 B)" title="切換多分頁批次匯出模式 (B)">
+        <svg viewBox="0 0 24 24" class="header-batch-svg" aria-hidden="true">
+          <rect x="2" y="7" width="15" height="14" rx="2" ry="2" />
+          <path d="M7 3h12a2 2 0 0 1 2 2v12" />
+        </svg>
+        <span class="header-batch-text" data-i18n="popup.batch">批次</span>
+      </button>
+    </header>
+
+    <!-- 批次分頁選取容器 (預設隱藏，點擊右上角批次按鈕後顯示) -->
+    <div id="batch-section" class="batch-section hidden">
+      <div class="batch-header-bar">
+        <label class="batch-select-all-label">
+          <input type="checkbox" id="batch-select-all" checked>
+          <span data-i18n="popup.selectAll">全選分頁</span>
+        </label>
+        <span id="batch-count-badge" class="batch-count-badge">已選取 0 / 0</span>
+      </div>
+
+      <div id="batch-tabs-list" class="batch-tabs-list">
+        <!-- 動態渲染當前視窗各分頁項目 -->
+      </div>
+    </div>
+
+    <!-- 影音加速助手：鎖定解析度控制列 (位於三張卡片上方) -->
+    <div class="stream-booster-card" id="stream-booster-card">
+      <div class="booster-header-row">
+        <div class="booster-title-group">
+          <svg viewBox="0 0 24 24" class="booster-icon-svg" aria-hidden="true">
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+          <span class="booster-title-text" data-i18n="booster.title">影音加速助手</span>
+          <span class="booster-badge-text" data-i18n="booster.badge">Stream Booster</span>
+        </div>
+        <div class="booster-right-controls">
+          <span id="booster-status-label" class="booster-status-label" data-i18n="booster.statusEnabled">已啟用</span>
+          <label class="booster-switch" data-i18n-title="booster.toggleTitle" title="切換影音加速助手啟用狀態">
+            <input type="checkbox" id="booster-toggle" checked data-i18n-aria-label="booster.toggleTitle" aria-label="切換影音加速助手啟用狀態">
+            <span class="booster-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="booster-quality-row">
+        <span class="booster-quality-title" id="booster-quality-heading" data-i18n="booster.qualityHeading">鎖定解析度</span>
+        <div class="booster-pills-group" id="booster-pills-group" role="radiogroup" aria-labelledby="booster-quality-heading">
+          <button type="button" class="booster-pill" data-quality="auto" role="radio" aria-checked="false" data-i18n="booster.qualityAuto" data-i18n-title="booster.qualityAutoDesc" title="不強制鎖定，由播放器自動調節">自動</button>
+          <button type="button" class="booster-pill" data-quality="720p" role="radio" aria-checked="false" data-i18n-title="booster.quality720pDesc" title="鎖定 720p 高畫質">720p</button>
+          <button type="button" class="booster-pill active" data-quality="1080p" role="radio" aria-checked="true" data-i18n-title="booster.quality1080pDesc" title="鎖定 1080p Full HD">1080p</button>
+          <button type="button" class="booster-pill" data-quality="1440p" role="radio" aria-checked="false" data-i18n-title="booster.quality1440pDesc" title="鎖定 1440p 2K 畫質">1440p</button>
+          <button type="button" class="booster-pill" data-quality="2160p" role="radio" aria-checked="false" data-i18n-title="booster.quality2160pDesc" title="鎖定 4K 超高畫質">4K</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第一行：三個核心功能卡片按鈕 (圖示置中放大、移除 123 標示) -->
+    <div class="buttons-row">
+      <!-- 按鈕 1: 純淨網址 -->
+      <button type="button" class="action-card" id="btn-copy-url" data-key="1" data-i18n-aria-label="popup.cleanUrlAria" data-i18n-title="popup.cleanUrlTitle" aria-label="複製純淨網址 (快捷鍵 1)" title="複製純淨網址 (Clean URL)">
+        <div class="icon-wrapper">
+          <svg class="morph-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <path id="path-icon-1" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+        </div>
+        <div class="card-title" data-i18n="popup.cleanUrl">純淨網址</div>
+        <div class="card-sub" data-i18n="popup.cleanUrlSub">Clean URL</div>
+      </button>
+
+      <!-- 按鈕 2: Markdown 連結 -->
+      <button type="button" class="action-card" id="btn-copy-markdown" data-key="2" data-i18n-aria-label="popup.markdownAria" data-i18n-title="popup.markdownTitle" aria-label="複製 Markdown 格式連結 (快捷鍵 2)" title="複製 Markdown 格式連結">
+        <div class="icon-wrapper">
+          <svg class="morph-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <path id="path-icon-2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8" />
+          </svg>
+        </div>
+        <div class="card-title" data-i18n="popup.markdown">Markdown</div>
+        <div class="card-sub" data-i18n="popup.markdownSub">[標題](網址)</div>
+      </button>
+
+      <!-- 按鈕 3: 引言與來源連結 -->
+      <button type="button" class="action-card" id="btn-copy-quote" data-key="3" data-i18n-aria-label="popup.quoteAria" data-i18n-title="popup.quoteTitle" aria-label="複製選取引言與來源連結 (快捷鍵 3)" title="複製選取引言與來源連結">
+        <div class="icon-wrapper">
+          <svg class="morph-svg" viewBox="0 0 24 24" aria-hidden="true">
+            <path id="path-icon-3" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </div>
+        <div class="card-title" data-i18n="popup.quote">引言來源</div>
+        <div class="card-sub" data-i18n="popup.quoteSub">Quote & Link</div>
+      </button>
+    </div>
+
+    <!-- 敏感資訊警示 (PII) -->
+    <div id="pii-alert" class="alert-banner hidden" role="alert">
+      <svg class="alert-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+      <div class="alert-text">
+        <strong id="pii-title" data-i18n="pii.alertTitle">已攔截敏感個資 (PII)</strong>
+        <p id="pii-details" data-i18n="pii.alertDefault">已自動為您過濾敏感授權或個人帳號資訊。</p>
+      </div>
+    </div>
+
+    <!-- YouTube 時間戳記選項 (僅在 YT 顯示) -->
+    <div id="yt-options" class="yt-options-row hidden">
+      <label class="toggle-container">
+        <input type="checkbox" id="yt-timestamp-toggle" data-i18n-aria-label="yt.keepTimeAria" aria-label="保留播放時間戳記">
+        <span class="toggle-label" id="yt-toggle-label">保留播放時間戳記 (<span id="yt-time-text">0s</span>)</span>
+      </label>
+      <kbd class="kbd">T</kbd>
+    </div>
+
+    <!-- 高清原圖下載開關 -->
+    <div id="media-options" class="media-options-row">
+      <label class="toggle-container">
+        <input type="checkbox" id="media-orig-toggle" checked data-i18n-aria-label="media.highRes" aria-label="高清原圖下載">
+        <span class="toggle-label" data-i18n="media.highRes">高清原圖下載</span>
+      </label>
+      <span class="media-toggle-tag" data-i18n="media.rightClickSupport">右鍵支援</span>
+    </div>
+
+    <!-- 底部狀態列 (包含右下角快捷鍵設定齒輪) -->
+    <footer class="footer">
+      <span id="footer-status" class="footer-status-text" data-i18n="popup.footerStatusDefault">點擊卡片快速複製 · Esc 關閉</span>
+      <button type="button" id="btn-settings" class="settings-btn" data-i18n-aria-label="popup.settingsAria" data-i18n-title="popup.settingsTitle" aria-label="開啟設定中心 (快捷鍵 O)" title="開啟設定中心 (O)">
+        <svg viewBox="0 0 24 24" class="gear-svg" aria-hidden="true">
+          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+        </svg>
+      </button>
+    </footer>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

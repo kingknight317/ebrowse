@@ -1,0 +1,20 @@
+{
+  "extensionName": {
+    "message": "CleanLink & QuickShare"
+  },
+  "extensionDesc": {
+    "message": "專注極致鍵盤操作的純淨網址與深度正規化分享助手。一鍵去追蹤、Amazon ASIN 極簡化、Markdown 格式轉換與 PII 個資防護。"
+  },
+  "actionTitle": {
+    "message": "CleanLink & QuickShare (點擊開啟或使用快捷鍵)"
+  },
+  "cmdCopyCleanUrl": {
+    "message": "一鍵複製純淨網址 (Clean URL)"
+  },
+  "cmdCopyMarkdown": {
+    "message": "一鍵複製 Markdown 格式連結"
+  },
+  "cmdCopyQuote": {
+    "message": "一鍵複製選取文字引言與純淨來源"
+  }
+}

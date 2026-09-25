@@ -1,0 +1,19 @@
+{
+  "name": "ebrowse",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "專為鍵盤狂人設計的**新世代純淨網址與深度正規化分享助手**。",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "morphicons": "^1.7.1"
+  }
+}

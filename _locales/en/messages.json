@@ -1,0 +1,20 @@
+{
+  "extensionName": {
+    "message": "CleanLink & QuickShare"
+  },
+  "extensionDesc": {
+    "message": "Keyboard-first clean URL & canonical share helper. One-click tracking cleaner, Amazon ASIN stripper, Markdown link formatter, and PII guard."
+  },
+  "actionTitle": {
+    "message": "CleanLink & QuickShare (Click to open or use shortcuts)"
+  },
+  "cmdCopyCleanUrl": {
+    "message": "One-click copy Clean URL"
+  },
+  "cmdCopyMarkdown": {
+    "message": "One-click copy Markdown format link"
+  },
+  "cmdCopyQuote": {
+    "message": "One-click copy selected quote & clean source URL"
+  }
+}

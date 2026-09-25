@@ -1,0 +1,20 @@
+{
+  "extensionName": {
+    "message": "CleanLink & QuickShare"
+  },
+  "extensionDesc": {
+    "message": "キーボード操作特化のクリーンURL＆正規化共有アシスタント。ワンクリック追跡除去、Amazon ASIN極簡化、Markdown変換、PII保護。"
+  },
+  "actionTitle": {
+    "message": "CleanLink & QuickShare (クリックして開くかショートカットを使用)"
+  },
+  "cmdCopyCleanUrl": {
+    "message": "クリーンURLをコピー (Clean URL)"
+  },
+  "cmdCopyMarkdown": {
+    "message": "Markdown形式のリンクをコピー"
+  },
+  "cmdCopyQuote": {
+    "message": "選択テキスト引用とクリーンな参照元URLをコピー"
+  }
+}

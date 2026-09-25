@@ -1,0 +1,20 @@
+{
+  "extensionName": {
+    "message": "CleanLink & QuickShare"
+  },
+  "extensionDesc": {
+    "message": "专注极致键盘操作的纯净网址与深度规范化分享助手。一键去追踪、Amazon ASIN 极简化、Markdown 格式转换与 PII 隐私防护。"
+  },
+  "actionTitle": {
+    "message": "CleanLink & QuickShare (点击打开或使用快捷键)"
+  },
+  "cmdCopyCleanUrl": {
+    "message": "一键复制纯净网址 (Clean URL)"
+  },
+  "cmdCopyMarkdown": {
+    "message": "一键复制 Markdown 格式链接"
+  },
+  "cmdCopyQuote": {
+    "message": "一键复制选中文本引言与纯净来源"
+  }
+}

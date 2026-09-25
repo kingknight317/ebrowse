@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="brand.desc">CleanLink & QuickShare - 設定中心</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="settings-layout">
+    <!-- 左側不可折疊側邊欄 -->
+    <aside class="sidebar">
+      <!-- 左上角：擴充元件標題與圖示 -->
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <svg viewBox="0 0 24 24" class="sidebar-logo-svg" aria-hidden="true">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+        </div>
+        <div class="sidebar-brand-text">
+          <h1 class="sidebar-title" data-i18n="brand.name">CleanLink</h1>
+          <span class="sidebar-subtitle" data-i18n="brand.badge">QuickShare 設定中心</span>
+        </div>
+      </div>
+
+      <!-- 分類導航清單 -->
+      <nav class="sidebar-nav" role="tablist" aria-label="設定分類導航">
+        <!-- 1. 社群軟體 -->
+        <button type="button" class="nav-item active" data-tab="social" id="tab-social" role="tab" aria-selected="true" aria-controls="panel-social">
+          <svg viewBox="0 0 24 24" class="nav-icon-svg" aria-hidden="true">
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+          <span data-i18n="nav.social">社群軟體</span>
+        </button>
+
+        <!-- 2. 電商平台 -->
+        <button type="button" class="nav-item" data-tab="ecommerce" id="tab-ecommerce" role="tab" aria-selected="false" aria-controls="panel-ecommerce">
+          <svg viewBox="0 0 24 24" class="nav-icon-svg" aria-hidden="true">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+          <span data-i18n="nav.ecommerce">電商平台</span>
+        </button>
+
+        <!-- 3. 隱私與個人識別資訊 (PII) 安全防護 -->
+        <button type="button" class="nav-item" data-tab="pii" id="tab-pii" role="tab" aria-selected="false" aria-controls="panel-pii">
+          <svg viewBox="0 0 24 24" class="nav-icon-svg" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          <span data-i18n="nav.pii">隱私與個資防護</span>
+        </button>
+
+        <!-- 4. 跨國語系獨立 -->
+        <button type="button" class="nav-item" data-tab="global" id="tab-global" role="tab" aria-selected="false" aria-controls="panel-global">
+          <svg viewBox="0 0 24 24" class="nav-icon-svg" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg>
+          <span data-i18n="nav.global">跨國語系獨立</span>
+        </button>
+
+        <!-- 5. 影音偏好 -->
+        <button type="button" class="nav-item" data-tab="media" id="tab-media" role="tab" aria-selected="false" aria-controls="panel-media">
+          <svg viewBox="0 0 24 24" class="nav-icon-svg" aria-hidden="true">
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+          <span data-i18n="nav.media">影音偏好</span>
+        </button>
+
+        <!-- 6. 連結行前探測器 -->
+        <button type="button" class="nav-item" data-tab="radar" id="tab-radar" role="tab" aria-selected="false" aria-controls="panel-radar">
+          <svg viewBox="0 0 24 24" class="nav-icon-svg" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="3" x2="12" y2="12" />
+            <line x1="12" y1="12" x2="20" y2="12" />
+          </svg>
+          <span data-i18n="nav.radar">連結行前探測</span>
+        </button>
+
+        <div class="nav-divider"></div>
+
+        <!-- 7. 快捷鍵配置 -->
+        <button type="button" class="nav-item" data-tab="shortcuts" id="tab-shortcuts" role="tab" aria-selected="false" aria-controls="panel-shortcuts">
+          <svg viewBox="0 0 24 24" class="nav-icon-svg" aria-hidden="true">
+            <rect x="2" y="4" width="20" height="16" rx="2" ry="2" />
+            <line x1="6" y1="8" x2="6" y2="8" />
+            <line x1="10" y1="8" x2="10" y2="8" />
+            <line x1="14" y1="8" x2="14" y2="8" />
+            <line x1="18" y1="8" x2="18" y2="8" />
+            <line x1="6" y1="12" x2="6" y2="12" />
+            <line x1="18" y1="12" x2="18" y2="12" />
+            <line x1="9" y1="16" x2="15" y2="16" />
+          </svg>
+          <span data-i18n="nav.shortcuts">快捷鍵配置</span>
+        </button>
+
+        <!-- 8. 全部設定總覽 -->
+        <button type="button" class="nav-item" data-tab="all" id="tab-all" role="tab" aria-selected="false" aria-controls="panel-all">
+          <svg viewBox="0 0 24 24" class="nav-icon-svg" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          <span data-i18n="nav.all">全部設定總覽</span>
+        </button>
+      </nav>
+
+      <!-- 側邊欄底部標註 -->
+      <footer class="sidebar-footer">
+        <p data-i18n="common.footerNotice">100% 本地運算 · 零數據收集</p>
+      </footer>
+    </aside>
+
+    <!-- 右側主要內容區 -->
+    <main class="settings-content">
+      <!-- 頂部標題、語言切換與即時儲存提示 -->
+      <div class="content-topbar">
+        <div class="content-heading-group">
+          <h2 id="content-heading" class="content-heading" data-i18n="tab.social.title">社群軟體與數位內容</h2>
+          <p id="content-subheading" class="content-subheading" data-i18n="tab.social.subtitle">剝離社交平台注入的好友分享碼、個人推薦與跨站追蹤標記</p>
+        </div>
+
+        <div class="topbar-actions">
+          <!-- 語言切換選擇器 (遵循使用者偏好與瀏覽器自適應) -->
+          <div class="language-picker-wrap">
+            <label for="app-language-select" class="language-picker-label" title="切換介面語言 / Change Language">
+              <svg viewBox="0 0 24 24" class="language-icon-svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+            </label>
+            <select id="app-language-select" class="select-dropdown language-select" aria-label="切換介面語言 (Language)">
+              <option value="auto">自動 (瀏覽器預設) / Auto</option>
+              <option value="zh-TW">繁體中文 (Traditional Chinese)</option>
+              <option value="zh-CN">简体中文 (Simplified Chinese)</option>
+              <option value="en">English (US)</option>
+              <option value="ja">日本語 (Japanese)</option>
+            </select>
+          </div>
+
+          <div id="save-toast" class="save-toast" role="status" aria-live="polite">
+            <svg viewBox="0 0 24 24" class="save-icon-svg" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span data-i18n="common.saveSuccess">設定已即時同步儲存</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 面板 1: 社群軟體與數位內容 -->
+      <section id="panel-social" class="tab-panel active">
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.social.title">熱門社群與串流平台</h3>
+              <p class="section-desc" data-i18n="sec.social.desc">自動剝離社交分享注入的推薦代碼、好友標識與狀態追蹤</p>
+            </div>
+          </div>
+
+          <div class="settings-list">
+            <!-- Google 搜尋 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanGoogle" data-i18n="opt.cleanGoogle">Google 搜尋激進瘦身</label>
+                <p class="setting-hint" data-i18n="opt.cleanGoogleHint">砍除數十組內部參數（sca_esv, sxsrf, ei 等），只保留核心關鍵字 q=</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanGoogle">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Twitter / X -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanTwitter" data-i18n="opt.cleanTwitter">Twitter / X 去除分享來源</label>
+                <p class="setting-hint" data-i18n="opt.cleanTwitterHint">剝離分享按鈕注入的 ?s=20&t=... 等追蹤參數，保留純淨狀態頁</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanTwitter">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Reddit -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanReddit" data-i18n="opt.cleanReddit">Reddit 轉 redd.it 極短網址</label>
+                <p class="setting-hint" data-i18n="opt.cleanRedditHint">自動轉化為 Reddit 官方超短網址格式（例如 https://redd.it/abc123）</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanReddit">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Bilibili -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanBilibili" data-i18n="opt.cleanBilibili">Bilibili 剝離推薦與來源碼</label>
+                <p class="setting-hint" data-i18n="opt.cleanBilibiliHint">移除 vd_source、spm_id_from 等參數，保留乾淨影片頁面</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanBilibili">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Instagram -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanInstagram" data-i18n="opt.cleanInstagram">Instagram (貼文 / Reels)</label>
+                <p class="setting-hint" data-i18n="opt.cleanInstagramHint">剝離官方分享注入的 igsh=, utm_source= 追蹤碼，保留乾淨短網址</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanInstagram">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Threads -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanThreads" data-i18n="opt.cleanThreads">Threads 貼文</label>
+                <p class="setting-hint" data-i18n="opt.cleanThreadsHint">移除 Meta 跨平台 xmt= 導流追蹤代碼，保留純淨貼文連結</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanThreads">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Spotify -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanSpotify" data-i18n="opt.cleanSpotify">Spotify 音樂 / 專輯 / 播放清單</label>
+                <p class="setting-hint" data-i18n="opt.cleanSpotifyHint">移除分享按鈕注入的 si=... 個人裝置追蹤代碼與 context 標籤</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanSpotify">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Netflix -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanNetflix" data-i18n="opt.cleanNetflix">Netflix 影集與電影</label>
+                <p class="setting-hint" data-i18n="opt.cleanNetflixHint">將繁複播放網址提煉為標準 /title/影片ID，砍除 trackId 參數</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanNetflix">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 面板 2: 各國主流購物電商平台 -->
+      <section id="panel-ecommerce" class="tab-panel">
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.ecom.title">國內外主流購物電商</h3>
+              <p class="section-desc" data-i18n="sec.ecom.desc">砍除商品網址中的長冗長中文品名 SEO Slug 與聯盟行銷推薦分潤碼</p>
+            </div>
+          </div>
+
+          <div class="settings-list">
+            <!-- Amazon -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanAmazon" data-i18n="opt.cleanAmazon">Amazon (美日德各國全站點)</label>
+                <p class="setting-hint" data-i18n="opt.cleanAmazonHint">砍除非必要路徑與導流標籤，只保留標準最短官方格式 /dp/ASIN</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanAmazon">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- 蝦皮購物 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanShopee" data-i18n="opt.cleanShopee">蝦皮購物 (Shopee)</label>
+                <p class="setting-hint" data-i18n="opt.cleanShopeeHint">剝離中文 SEO 冗長品名與分潤追蹤碼，標準化為 /product/賣家ID/商品ID</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanShopee">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- momo 購物網 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanMomo" data-i18n="opt.cleanMomo">momo 購物網</label>
+                <p class="setting-hint" data-i18n="opt.cleanMomoHint">提煉純淨商品代碼 i_code，砍除分類導流 mdiv 與促銷參數</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanMomo">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- PChome 24h -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanPchome" data-i18n="opt.cleanPchome">PChome 24h 購物</label>
+                <p class="setting-hint" data-i18n="opt.cleanPchomeHint">剝離分類大綱與行銷引流標籤，保留乾淨 /prod/商品編號 網址</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanPchome">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- eBay -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanEbay" data-i18n="opt.cleanEbay">eBay 全球拍賣商城</label>
+                <p class="setting-hint" data-i18n="opt.cleanEbayHint">剝離商品長品名 Slug 與 _trkparms 追蹤碼，保留純淨 /itm/物品ID</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanEbay">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- AliExpress -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanAliexpress" data-i18n="opt.cleanAliexpress">AliExpress 全球速賣通</label>
+                <p class="setting-hint" data-i18n="opt.cleanAliexpressHint">剝離 spm 追蹤參數與推薦算法標記，保留乾淨 /item/商品ID.html</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanAliexpress">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- 淘寶 / 天貓 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanTaobao" data-i18n="opt.cleanTaobao">淘寶 / 天貓 (Taobao & Tmall)</label>
+                <p class="setting-hint" data-i18n="opt.cleanTaobaoHint">移除阿里系 spm 追蹤標記與導流廣告碼，提煉純淨 id= 物品代碼</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanTaobao">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Coupang 酷澎 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanCoupang" data-i18n="opt.cleanCoupang">Coupang 酷澎</label>
+                <p class="setting-hint" data-i18n="opt.cleanCoupangHint">移除 vendorItemId 與行銷引流標籤，保留標準 /vp/products/商品ID</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanCoupang">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- JD 京東商城 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanJd" data-i18n="opt.cleanJd">JD 京東商城</label>
+                <p class="setting-hint" data-i18n="opt.cleanJdHint">剝離推廣追蹤代碼與導流參數，保留標準 /商品編號.html 純淨連結</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanJd">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Steam 遊戲商城 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="cleanSteam" data-i18n="opt.cleanSteam">Steam 遊戲商店</label>
+                <p class="setting-hint" data-i18n="opt.cleanSteamHint">砍除遊戲長名稱 Slug 與 snr 分流導航標籤，保留標準 /app/遊戲ID</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cleanSteam">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 面板 3: 隱私與個人識別資訊 (PII) 安全防護 -->
+      <section id="panel-pii" class="tab-panel">
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.pii.title">隱私與個人識別資訊 (PII) 安全防護</h3>
+              <p class="section-desc" data-i18n="sec.pii.desc">防止在分享時意外將含有個人帳號、授權 Token 或 Session 的網址傳送給他人</p>
+            </div>
+          </div>
+
+          <div class="settings-list">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="filterPII" data-i18n="opt.filterPII">自動攔截並脫敏敏感個資 (PII)</label>
+                <p class="setting-hint" data-i18n="opt.filterPIIHint">偵測並過濾 email=, token=, auth=, session= 等敏感參數，並在彈窗中醒目警示</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="filterPII">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- PII 防護說明卡片 -->
+          <div class="info-card">
+            <div class="info-card-header">
+              <svg viewBox="0 0 24 24" class="info-card-svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span data-i18n="info.piiTitle">受防護的敏感參數特徵</span>
+            </div>
+            <p class="info-card-desc" data-i18n="info.piiDesc">包含 email, user_email, token, access_token, auth, jwt, session, session_id, user_id, api_key, auth_token, bearer 及符合電子信箱格式的網址查詢參數。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 面板 4: 跨國語系獨立 -->
+      <section id="panel-global" class="tab-panel">
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.global.title">跨國語系與幣別獨立（自適應脫敏）</h3>
+              <p class="section-desc" data-i18n="sec.global.desc">自動剝離強制鎖定的語系與幣別參數，讓海外或跨語系接收者以自身裝置偏好瀏覽</p>
+            </div>
+          </div>
+
+          <div class="settings-list">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="globalAdaptive" data-i18n="opt.globalAdaptive">啟用跨國語系與幣別自適應脫敏</label>
+                <p class="setting-hint" data-i18n="opt.globalAdaptiveHint">自動剔除 hl=, gl=, lang=, locale=, currency=, curr= 等參數，避免對方點開被強迫鎖定為您的語言或幣別</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="globalAdaptive">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 跨國脫敏說明卡片 -->
+          <div class="info-card">
+            <div class="info-card-header">
+              <svg viewBox="0 0 24 24" class="info-card-svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span data-i18n="info.globalTitle">自適應脫敏參數範圍</span>
+            </div>
+            <p class="info-card-desc" data-i18n="info.globalDesc">涵蓋語系與地區標籤（hl, gl, lang, language, locale, country, region, intl, setlang）以及計價幣別標籤（currency, curr）。若有分享固定語系的需求，可隨時在此一鍵關閉。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 面板 5: 影音與媒體偏好 -->
+      <section id="panel-media" class="tab-panel">
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.yt.title">YouTube 影音偏好</h3>
+              <p class="section-desc" data-i18n="sec.yt.desc">自訂複製 YouTube 影片時的時間戳記行為</p>
+            </div>
+          </div>
+
+          <div class="settings-list">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="preserveYtTime" data-i18n="opt.preserveYtTime">預設保留當前播放秒數時間戳記 (?t=Xs)</label>
+                <p class="setting-hint" data-i18n="opt.preserveYtTimeHint">複製 YouTube 連結時，預設帶上您正在觀看的當前時間進度</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="preserveYtTime">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 影音偏好說明卡片 -->
+          <div class="info-card">
+            <div class="info-card-header">
+              <svg viewBox="0 0 24 24" class="info-card-svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span data-i18n="info.ytTitle">即時切換快捷鍵</span>
+            </div>
+            <p class="info-card-desc" data-i18n="info.ytDesc">在 YouTube 頁面開啟彈窗時，直接按下鍵盤「T」鍵即可立即切換是否保留當前秒數時間戳記。</p>
+          </div>
+        </div>
+
+        <!-- 高清原圖直取與下載區塊 -->
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.mediaOrig.title">高畫質純淨原圖直取與下載 (Original Media Extractor)</h3>
+              <p class="section-desc" data-i18n="sec.mediaOrig.desc">在網頁圖片上點擊右鍵直接開啟、下載或複製未經壓縮的最高畫質純淨原圖</p>
+            </div>
+          </div>
+
+          <div class="settings-list">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="enableMediaOriginal" data-i18n="opt.enableMediaOriginal">啟用高畫質純淨原圖直取功能</label>
+                <p class="setting-hint" data-i18n="opt.enableMediaOriginalHint">開啟後，於網頁任一圖片點擊右鍵，即可在功能表中直接使用「在新分頁開啟高清原圖」、「下載高清純淨原圖」與「複製高清原圖網址」</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="enableMediaOriginal">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 原圖逆向支援說明卡片 -->
+          <div class="info-card">
+            <div class="info-card-header">
+              <svg viewBox="0 0 24 24" class="info-card-svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span data-i18n="info.mediaOrigTitle">支援平台與高畫質逆向規格</span>
+            </div>
+            <p class="info-card-desc" data-i18n="info.mediaOrigDesc">Twitter / X（自動還原 :orig 原畫質無損檔）、Reddit（預覽圖自動還原 i.redd.it 原始圖檔）、Bilibili（剝離動態縮圖及 @webp 尺寸後綴）、YouTube（自動升級提取 1080p 超高解析度 maxresdefault.jpg 封面）、新浪微博（自動升級至 /large/ 原始大圖）、維基共享資源 Wikimedia（自動剝離 /thumb/ 提取無損原始檔）以及各大常見圖床縮圖尺寸自動脫敏。</p>
+          </div>
+        </div>
+
+        <!-- 影音加速助手 (Stream Booster) 區塊 -->
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.booster.title">影音加速助手 (Stream Booster)</h3>
+              <p class="section-desc" data-i18n="sec.booster.desc">透過硬解優先降負、跳過 ABR 階梯試探與擴展開源播放器緩衝，加速影片載入並消除卡頓</p>
+            </div>
+          </div>
+
+          <div class="settings-list">
+            <!-- 總開關 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="enableStreamBooster" data-i18n="opt.enableStreamBooster">啟用影音加速助手</label>
+                <p class="setting-hint" data-i18n="opt.enableStreamBoosterHint">整體開啟或暫停影音加速與畫質鎖定功能</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="enableStreamBooster">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- 優先 GPU 硬體解碼 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="boosterDisableAV1" data-i18n="opt.boosterDisableAV1">優先 GPU 硬體解碼（阻止 AV1 軟解請求）</label>
+                <p class="setting-hint" data-i18n="opt.boosterDisableAV1Hint">智慧阻斷高耗能的 AV1 軟解格式，促使 YouTube、Bilibili 等平台推送具備 GPU 原生硬解的 VP9 / H.264，大幅降低 CPU 佔用，消除軟解引起的假性轉圈與掉幀</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="boosterDisableAV1">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- 預設鎖定解析度 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="boosterQuality" data-i18n="opt.boosterQuality">預設鎖定解析度</label>
+                <p class="setting-hint" data-i18n="opt.boosterQualityHint">跳過播放器開頭 360p 的階梯頻寬試探，直接鎖定首選畫質（可在彈出視窗隨時點擊切換）</p>
+              </div>
+              <div class="setting-control">
+                <select id="boosterQuality" class="select-dropdown">
+                  <option value="auto" data-i18n="booster.qualityAuto">自動 (Auto - 由播放器自動調節)</option>
+                  <option value="720p">720p (HD 高畫質)</option>
+                  <option value="1080p">1080p (Full HD - 推薦)</option>
+                  <option value="1440p">1440p (2K 畫質)</option>
+                  <option value="2160p">4K (2160p 超高畫質)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 開源播放器前瞻快取擴展 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="boosterExpandHLS" data-i18n="opt.boosterExpandHLS">開源播放器前瞻快取擴展（Hls.js / Dash.js）</label>
+                <p class="setting-hint" data-i18n="opt.boosterExpandHLSHint">在採用開源串流播放器的影視網站與新聞台，將前瞻緩衝長度從預設 30 秒擴展至 120 秒（配額 60MB），免除網路瞬斷轉圈困擾</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="boosterExpandHLS">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- 播放器懸浮子母畫面手動按鈕 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="enablePipHoverBtn" data-i18n="opt.enablePipHoverBtn">啟用播放器懸浮子母畫面手動按鈕 (Hover PiP Button)</label>
+                <p class="setting-hint" data-i18n="opt.enablePipHoverBtnHint">滑鼠移至網頁影片右上角時淡入極簡子母畫面圖示，點擊即可手動開啟或還原原生子母畫面。純手動觸發，絕不自動彈出打擾</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="enablePipHoverBtn">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 影音加速提示卡片 -->
+          <div class="info-card">
+            <div class="info-card-header">
+              <svg viewBox="0 0 24 24" class="info-card-svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span data-i18n="info.boosterTitle">影音加速運作機制說明</span>
+            </div>
+            <p class="info-card-desc" data-i18n="info.boosterDesc">本功能採用現代前端無損架構：透過遮蔽無硬解支援的高負載編碼以釋放 80%+ 的 CPU 負擔；並於播放器初始化時直接指定目標畫質，消除首段試探的緩衝重建延遲；開源 HLS 前瞻長度則在瀏覽器安全記憶體限額內平穩推進。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 面板 6: 連結行前探測器 -->
+      <section id="panel-radar" class="tab-panel">
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="3" x2="12" y2="12" />
+                <line x1="12" y1="12" x2="20" y2="12" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.radar.title">點擊前防雷：連結行前探測器 (Pre-Flight Link Radar)</h3>
+              <p class="section-desc" data-i18n="sec.radar.desc">在滑鼠懸浮於超連結時即時預警付費牆、強制登入與低品質 AI 內容農場</p>
+            </div>
+          </div>
+
+          <div class="settings-list">
+            <!-- 主開關 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="enableLinkRadar" data-i18n="opt.enableLinkRadar">啟用連結行前探測懸浮預警 (Hover Peek)</label>
+                <p class="setting-hint" data-i18n="opt.enableLinkRadarHint">游標停留於網頁連結 180ms 時，於上方即時彈出網站屬性微型提示卡片</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="enableLinkRadar">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- 僅警告模式 -->
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="radarAlertOnly" data-i18n="opt.radarAlertOnly">僅在偵測到警告（付費牆或內容農場）時顯示提示</label>
+                <p class="setting-hint" data-i18n="opt.radarAlertOnlyHint">開啟後，正常無害的網站將保持隱形不打擾，僅在遇到風險目標時主動跳出警示</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="radarAlertOnly">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 探測標籤說明卡片 -->
+          <div class="info-card">
+            <div class="info-card-header">
+              <svg viewBox="0 0 24 24" class="info-card-svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span data-i18n="info.radarTitle">探測器預警標籤與視覺規範</span>
+            </div>
+            <p class="info-card-desc" data-i18n="info.radarDesc">全介面採用極致俐落之幾何向量 SVG 圖示，嚴格零 Emoji 干擾：
+• 八角盾牌警示：警告：此站有嚴格付費牆 / 強制登入（涵蓋 WSJ、NYT、彭博、天下、商周、財新等付費鎖死媒體與 Quora、Scribd 等強制註冊閱讀平台）
+• 琥珀三角警示：警告：偵測到為低品質 AI 內容農場（涵蓋各類廢話採集站、轉載洗稿農場與程式碼採集站）
+• 翡翠勾選圓環：正常（安全可信或未受污染之正常網路資源）</p>
+          </div>
+        </div>
+
+        <!-- 提示標籤位置偏好與即時預覽沙盒 -->
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+                <path d="M13 13l6 6" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.radarPos.title">提示標籤位置偏好與即時預覽</h3>
+              <p class="section-desc" data-i18n="sec.radarPos.desc">自訂預警標籤相對於鼠標或超連結的出現方位，並在下方沙盒中即時預覽</p>
+            </div>
+          </div>
+
+          <!-- 位置選項卡片 (4種方位) -->
+          <div class="position-grid">
+            <label class="position-card active" data-pos="cursor-top-right">
+              <input type="radio" name="radarPosition" value="cursor-top-right" checked>
+              <div class="pos-card-content">
+                <div class="pos-icon-box">
+                  <svg viewBox="0 0 24 24" class="pos-svg" aria-hidden="true">
+                    <path d="M4 4l5 12 2-5 5-2L4 4z"/>
+                    <rect x="13" y="2" width="9" height="6" rx="1"/>
+                  </svg>
+                </div>
+                <div class="pos-card-title" data-i18n="pos.cursorTopRight">緊貼鼠標右上</div>
+                <div class="pos-card-desc" data-i18n="pos.cursorTopRightDesc">預設推薦，最靠近視覺焦點</div>
+              </div>
+            </label>
+
+            <label class="position-card" data-pos="cursor-top">
+              <input type="radio" name="radarPosition" value="cursor-top">
+              <div class="pos-card-content">
+                <div class="pos-icon-box">
+                  <svg viewBox="0 0 24 24" class="pos-svg" aria-hidden="true">
+                    <path d="M12 11l-3 9 2-3 2 3-1-9z"/>
+                    <rect x="5" y="2" width="14" height="6" rx="1"/>
+                  </svg>
+                </div>
+                <div class="pos-card-title" data-i18n="pos.cursorTop">鼠標正上方</div>
+                <div class="pos-card-desc" data-i18n="pos.cursorTopDesc">居中對齊游標中軸</div>
+              </div>
+            </label>
+
+            <label class="position-card" data-pos="cursor-bottom-right">
+              <input type="radio" name="radarPosition" value="cursor-bottom-right">
+              <div class="pos-card-content">
+                <div class="pos-icon-box">
+                  <svg viewBox="0 0 24 24" class="pos-svg" aria-hidden="true">
+                    <path d="M4 4l5 12 2-5 5-2L4 4z"/>
+                    <rect x="13" y="16" width="9" height="6" rx="1"/>
+                  </svg>
+                </div>
+                <div class="pos-card-title" data-i18n="pos.cursorBottomRight">鼠標右下方</div>
+                <div class="pos-card-desc" data-i18n="pos.cursorBottomRightDesc">避免遮擋上方內文</div>
+              </div>
+            </label>
+
+            <label class="position-card" data-pos="anchor-top">
+              <input type="radio" name="radarPosition" value="anchor-top">
+              <div class="pos-card-content">
+                <div class="pos-icon-box">
+                  <svg viewBox="0 0 24 24" class="pos-svg" aria-hidden="true">
+                    <line x1="4" y1="18" x2="20" y2="18"/>
+                    <rect x="5" y="6" width="14" height="6" rx="1"/>
+                  </svg>
+                </div>
+                <div class="pos-card-title" data-i18n="pos.anchorTop">超連結正上方</div>
+                <div class="pos-card-desc" data-i18n="pos.anchorTopDesc">貼齊連結頂部邊界</div>
+              </div>
+            </label>
+          </div>
+
+          <!-- 即時互動預覽沙盒 -->
+          <div class="radar-preview-container">
+            <div class="preview-header">
+              <div class="preview-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="preview-url-bar">
+                <svg viewBox="0 0 24 24" class="preview-lock-svg" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>https://example.com/daily-news</span>
+              </div>
+              <!-- 預覽狀態切換按鈕 -->
+              <div class="preview-status-tabs">
+                <button type="button" class="preview-status-btn active" data-status="paywall" data-i18n="preview.paywallTab">付費牆</button>
+                <button type="button" class="preview-status-btn" data-status="ai_farm" data-i18n="preview.farmTab">內容農場</button>
+                <button type="button" class="preview-status-btn" data-status="safe" data-i18n="preview.safeTab">正常</button>
+              </div>
+            </div>
+
+            <div class="preview-stage" id="preview-stage">
+              <p class="preview-stage-text">
+                <span data-i18n="preview.mockNewsText">最新市場焦點分析：聯準會公佈最新政策走向，讀者可點此查閱</span>
+                <a href="javascript:void(0)" class="preview-mock-link" id="preview-mock-link" data-i18n="preview.mockLink">紐約時報付費專題報導</a>
+                <span data-i18n="preview.mockNewsTail">進行深度分析，並提供市場未來季度估值走勢預測。</span>
+              </p>
+
+              <!-- 模擬鼠標指針 (靜態演示用，真實鼠標移入時隱藏) -->
+              <div class="preview-mock-cursor" id="preview-mock-cursor">
+                <svg viewBox="0 0 24 24" class="cursor-svg" aria-hidden="true">
+                  <path d="M4 3l15 11-7 1-4 6-2-2 3-5-5-11z"/>
+                </svg>
+              </div>
+
+              <!-- 預覽用的微型標籤 (動態跟隨真實或模擬鼠標) -->
+              <div class="preview-radar-tooltip __status-paywall" id="preview-radar-tooltip">
+                <span id="preview-tooltip-icon">
+                  <svg viewBox="0 0 24 24" class="__cleanlink-radar-svg __radar-danger" aria-hidden="true"><path d="M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86L7.86 2z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </span>
+                <span class="__radar-text" id="preview-tooltip-text" data-i18n="radar.paywall">警告：此站有嚴格付費牆 / 強制登入</span>
+                <span class="__cleanlink-radar-domain" id="preview-tooltip-domain">wsj.com</span>
+              </div>
+
+              <div class="preview-hint" data-i18n="preview.hint">可切換上方方位即時觀察位置變化，亦可直接將滑鼠移至超連結體驗實際效果</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 面板 7: 快捷鍵配置 -->
+      <section id="panel-shortcuts" class="tab-panel">
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <rect x="2" y="4" width="20" height="16" rx="2" ry="2" />
+                <line x1="6" y1="8" x2="6" y2="8" />
+                <line x1="10" y1="8" x2="10" y2="8" />
+                <line x1="14" y1="8" x2="14" y2="8" />
+                <line x1="18" y1="8" x2="18" y2="8" />
+                <line x1="6" y1="12" x2="6" y2="12" />
+                <line x1="18" y1="12" x2="18" y2="12" />
+                <line x1="9" y1="16" x2="15" y2="16" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.shortcuts.title">鍵盤快捷鍵配置</h3>
+              <p class="section-desc" data-i18n="sec.shortcuts.desc">目前預設全局快捷鍵與自訂修改導引</p>
+            </div>
+          </div>
+
+          <div class="shortcuts-grid">
+            <div class="shortcut-card">
+              <span class="shortcut-action" data-i18n="shortcut.cleanUrl">複製純淨網址</span>
+              <kbd class="kbd">Alt + C</kbd>
+            </div>
+            <div class="shortcut-card">
+              <span class="shortcut-action" data-i18n="shortcut.markdown">複製 Markdown 連結</span>
+              <kbd class="kbd">Alt + M</kbd>
+            </div>
+            <div class="shortcut-card">
+              <span class="shortcut-action" data-i18n="shortcut.quote">複製選取引言與來源</span>
+              <kbd class="kbd">Alt + Q</kbd>
+            </div>
+          </div>
+
+          <div class="shortcuts-action-row">
+            <button id="btn-open-chrome-shortcuts" class="btn-primary" type="button">
+              <span data-i18n="shortcut.btnOpenChrome">前往 Chrome 原生自訂快捷鍵設定</span>
+              <svg viewBox="0 0 24 24" class="btn-arrow-svg" aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+            <span class="action-note" data-i18n="shortcut.openNote">將開啟 chrome://extensions/shortcuts，可隨時替換鍵盤組合鍵</span>
+          </div>
+        </div>
+
+        <!-- 獨立欄位：引言快捷鍵增強 (Scroll-to-Text) -->
+        <div class="settings-section">
+          <div class="section-header">
+            <div class="section-icon-box">
+              <svg viewBox="0 0 24 24" class="section-svg" aria-hidden="true">
+                <path d="M4 6h16M4 12h16M4 18h10" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="section-title" data-i18n="sec.textFrag.title">引言快捷鍵增強：精準段落錨點</h3>
+              <p class="section-desc" data-i18n="sec.textFrag.desc">反白選取文字並使用 Alt + Q 複製時的跳轉錨點行為配置</p>
+            </div>
+          </div>
+
+          <div class="settings-list">
+            <div class="setting-item">
+              <div class="setting-info">
+                <label class="setting-label" for="enableTextFragment" data-i18n="opt.enableTextFragment">反白文字自動附加精準段落錨點 (Scroll-to-Text)</label>
+                <p class="setting-hint" data-i18n="opt.enableTextFragmentHint">使用 Alt+Q 或反白浮動按鈕時，自動在網址末端附加 #:~:text= 錨點，點擊連結者直接平滑捲動至該段反白並高亮</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="enableTextFragment">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card-header">
+              <svg viewBox="0 0 24 24" class="info-card-svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span data-i18n="info.textFragTitle">精準錨點作用機制</span>
+            </div>
+            <p class="info-card-desc" data-i18n="info.textFragDesc">僅在使用者於網頁中有實際反白選取文字時才會啟用錨點，未選取時將自動維持純淨原始網址。符合 W3C 原生標準規範，若接收端平台不支援將自動降級開啟原頁面，不影響瀏覽體驗。</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="settings-footer">
+    <p data-i18n="common.footerNoticeFull">CleanLink & QuickShare · 100% 本地運算 · 零數據收集 · 極致鍵盤分享助手</p>
+  </footer>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+import { mapToYouTubeQuality, isAV1Codec, expandHlsConfig, QUALITY_MAP } from '../lib/stream-booster.js';
+
+let passed = 0;
+let failed = 0;
+
+function assert(condition, message) {
+  if (condition) {
+    console.log(`[PASS] ${message}`);
+    passed++;
+  } else {
+    console.error(`[FAIL] ${message}`);
+    failed++;
+  }
+}
+
+console.log('--- 開始測試 影音加速助手 (Stream Booster) ---');
+
+// 1. 畫質對應測試
+assert(mapToYouTubeQuality('1080p') === 'hd1080', '1080p 映射為 hd1080');
+assert(mapToYouTubeQuality('1440p') === 'hd1440', '1440p 映射為 hd1440');
+assert(mapToYouTubeQuality('2160p') === 'hd2160', '2160p (4K) 映射為 hd2160');
+assert(mapToYouTubeQuality('720p') === 'hd720', '720p 映射為 hd720');
+assert(mapToYouTubeQuality('auto') === 'default', 'auto 映射為 default');
+assert(mapToYouTubeQuality('unknown') === 'default', '無效畫質預設安全映射為 default');
+
+// 2. AV1 軟解阻斷檢測測試
+assert(isAV1Codec('video/mp4; codecs="av01.0.08M.08"') === true, 'MP4 av01 識別為 AV1');
+assert(isAV1Codec('video/webm; codecs="av1"') === true, 'WebM av1 識別為 AV1');
+assert(isAV1Codec('video/mp4; codecs=av01.0.05M.08') === true, '無引號 av01 識別為 AV1');
+assert(isAV1Codec('video/webm; codecs="vp9"') === false, 'VP9 不被識別為 AV1 (正常放行)');
+assert(isAV1Codec('video/mp4; codecs="avc1.640028"') === false, 'H.264 (avc1) 不被識別為 AV1 (正常放行)');
+assert(isAV1Codec('audio/webm; codecs="opus"') === false, 'Opus 音訊不被識別為 AV1 (正常放行)');
+assert(isAV1Codec(null) === false, '空值安全防護');
+assert(isAV1Codec('') === false, '空字串安全防護');
+
+// 3. 開源 Hls 配置擴充測試
+const originalConfig = {
+  maxBufferLength: 30,
+  maxBufferSize: 30 * 1024 * 1024,
+  customProp: 'test'
+};
+const expanded = expandHlsConfig(originalConfig);
+
+assert(expanded.maxBufferLength === 120, 'HLS maxBufferLength 成功擴展至 120 秒');
+assert(expanded.maxMaxBufferLength === 300, 'HLS maxMaxBufferLength 安全設定為 300 秒');
+assert(expanded.maxBufferSize === 60 * 1024 * 1024, 'HLS maxBufferSize 擴充至 60MB');
+assert(expanded.customProp === 'test', '保留原生配置屬性');
+assert(originalConfig.maxBufferLength === 30, '不可變原則：原配置未被就地竄改');
+
+// 4. Universal PiP 子母畫面解鎖與配置測試
+function unrestrictVideoForPip(videoMock) {
+  if (videoMock.hasAttribute('disablePictureInPicture')) {
+    videoMock.removeAttribute('disablePictureInPicture');
+  }
+  videoMock.disablePictureInPicture = false;
+  return videoMock;
+}
+
+const mockVideo = {
+  attributes: { disablePictureInPicture: '' },
+  hasAttribute(name) { return name in this.attributes; },
+  removeAttribute(name) { delete this.attributes[name]; },
+  disablePictureInPicture: true
+};
+
+unrestrictVideoForPip(mockVideo);
+assert(mockVideo.hasAttribute('disablePictureInPicture') === false, '成功拔除 disablePictureInPicture 標籤屬性');
+assert(mockVideo.disablePictureInPicture === false, '成功重設 disablePictureInPicture 為 false');
+
+// 5. 零 Emoji 與向量 SVG 檢查
+const PIP_ENTER_ICON = '<svg viewBox="0 0 24 24" class="__cleanlink-pip-svg" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><rect x="12" y="10" width="8" height="6" rx="1" ry="1" fill="currentColor"></rect></svg>';
+const PIP_RESTORE_ICON = '<svg viewBox="0 0 24 24" class="__cleanlink-pip-svg" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><polyline points="13 14 16 11 19 14"></polyline><line x1="16" y1="11" x2="16" y2="17"></line></svg>';
+
+const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+assert(!emojiRegex.test(PIP_ENTER_ICON), '進入 PiP SVG 嚴格零 Emoji');
+assert(!emojiRegex.test(PIP_RESTORE_ICON), '還原 PiP SVG 嚴格零 Emoji');
+assert(PIP_ENTER_ICON.includes('<rect') && PIP_RESTORE_ICON.includes('<polyline'), 'PiP SVG 具備標準幾何向量路徑');
+
+// 6. 預覽頁面與卡片預覽影片判定測試 (在預覽頁不跳出按鈕)
+function testIsPreviewVideoOrPage(url, videoMock = null) {
+  const parsed = new URL(url);
+  const host = parsed.hostname.toLowerCase();
+  const path = parsed.pathname.toLowerCase();
+
+  if (host.includes('youtube.com')) {
+    const isWatchPage = path.startsWith('/watch') ||
+                        path.startsWith('/shorts/') ||
+                        path.startsWith('/embed/') ||
+                        path.startsWith('/live/');
+    if (!isWatchPage) return true;
+
+    if (videoMock && videoMock.closest) {
+      if (videoMock.closest('#inline-preview-player, ytd-video-preview, ytd-compact-video-renderer')) {
+        return true;
+      }
+    }
+  }
+
+  if (host.includes('bilibili.com')) {
+    const isWatchPage = path.startsWith('/video/') ||
+                        path.startsWith('/bangumi/play/') ||
+                        path.startsWith('/medialist/play/') ||
+                        host.startsWith('live.bilibili.com');
+    if (!isWatchPage) return true;
+
+    if (videoMock && videoMock.closest && videoMock.closest('.bili-video-card, .feed-card')) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+assert(testIsPreviewVideoOrPage('https://www.youtube.com/') === true, 'YouTube 首頁判定為預覽頁 (靜默不跳出)');
+assert(testIsPreviewVideoOrPage('https://www.youtube.com/results?search_query=news') === true, 'YouTube 搜尋結果頁判定為預覽頁 (靜默不跳出)');
+assert(testIsPreviewVideoOrPage('https://www.youtube.com/feed/subscriptions') === true, 'YouTube 訂閱動態頁判定為預覽頁 (靜默不跳出)');
+assert(testIsPreviewVideoOrPage('https://www.youtube.com/@mkbhd') === true, 'YouTube 頻道首頁判定為預覽頁 (靜默不跳出)');
+assert(testIsPreviewVideoOrPage('https://www.youtube.com/watch?v=dQw4w9WgXcQ') === false, 'YouTube 播放頁判定為正常播放 (放行按鈕)');
+assert(testIsPreviewVideoOrPage('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
+  closest: (sel) => sel.includes('ytd-compact-video-renderer')
+}) === true, 'YouTube 播放頁側欄推薦卡片預覽 (精確攔截排除)');
+assert(testIsPreviewVideoOrPage('https://www.bilibili.com/') === true, 'Bilibili 首頁判定為預覽頁 (靜默不跳出)');
+assert(testIsPreviewVideoOrPage('https://www.bilibili.com/video/BV1xx411c7X') === false, 'Bilibili 影片播放頁判定為正常播放 (放行按鈕)');
+
+console.log(`\n測試結果: 通過 ${passed} 項，失敗 ${failed} 項\n`);
+
+if (failed > 0) {
+  process.exit(1);
+}
