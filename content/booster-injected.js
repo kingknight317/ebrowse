@@ -159,6 +159,16 @@
       }
     } catch (_) {}
 
+    try {
+      const origLoadSource = PatchedHls.prototype.loadSource;
+      if (typeof origLoadSource === 'function') {
+        PatchedHls.prototype.loadSource = function (url) {
+          recordMediaStream(url);
+          return origLoadSource.apply(this, arguments);
+        };
+      }
+    } catch (_) {}
+
     return PatchedHls;
   }
 
@@ -202,6 +212,20 @@
           if (window.__CLEANLINK_CAPTURED_STREAMS__.length > 30) {
             window.__CLEANLINK_CAPTURED_STREAMS__.pop();
           }
+
+          // 1. 同步寫入共享 DOM 屬性，供 ISOLATED 執行環境即時讀取
+          try {
+            if (document.documentElement) {
+              document.documentElement.setAttribute('data-cleanlink-stream', parsed);
+            }
+          } catch (_) {}
+
+          // 2. 透過 postMessage 進行雙向安全廣播
+          try {
+            window.postMessage({ type: '__CLEANLINK_STREAM_DETECTED__', url: parsed }, '*');
+          } catch (_) {}
+
+          // 3. 派發原生自訂事件
           window.dispatchEvent(new CustomEvent('__CLEANLINK_STREAM_DETECTED__', { detail: { url: parsed } }));
         }
       }
@@ -232,6 +256,23 @@
         return origOpen.apply(this, arguments);
       };
     }
+  } catch (_) {}
+
+  // 3. 監控頁面全域串流變數 (如 Jable.tv 等站點的 window.hlsUrl)
+  try {
+    let _hlsUrl = window.hlsUrl;
+    if (_hlsUrl) recordMediaStream(_hlsUrl);
+    Object.defineProperty(window, 'hlsUrl', {
+      configurable: true,
+      enumerable: true,
+      get: function () {
+        return _hlsUrl;
+      },
+      set: function (val) {
+        _hlsUrl = val;
+        recordMediaStream(val);
+      }
+    });
   } catch (_) {}
 })();
 

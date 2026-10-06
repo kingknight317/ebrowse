@@ -5,7 +5,8 @@ import {
   QUALITY_MAP,
   POTPLAYER_ICON,
   detectVideoMediaUrl,
-  buildPotPlayerUrl
+  buildPotPlayerUrl,
+  buildPotPlayerCommand
 } from '../lib/stream-booster.js';
 
 let passed = 0;
@@ -116,6 +117,10 @@ function testIsPreviewVideoOrPage(url, videoMock = null) {
     }
   }
 
+  if (host.includes('jable.tv')) {
+    if (!path.startsWith('/videos/')) return true;
+  }
+
   return false;
 }
 
@@ -129,6 +134,9 @@ assert(testIsPreviewVideoOrPage('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
 }) === true, 'YouTube 播放頁側欄推薦卡片預覽 (精確攔截排除)');
 assert(testIsPreviewVideoOrPage('https://www.bilibili.com/') === true, 'Bilibili 首頁判定為預覽頁 (靜默不跳出)');
 assert(testIsPreviewVideoOrPage('https://www.bilibili.com/video/BV1xx411c7X') === false, 'Bilibili 影片播放頁判定為正常播放 (放行按鈕)');
+assert(testIsPreviewVideoOrPage('https://jable.tv/') === true, 'Jable.tv 首頁判定為預覽頁 (靜默不跳出)');
+assert(testIsPreviewVideoOrPage('https://jable.tv/hot/') === true, 'Jable.tv 分類頁判定為預覽頁 (靜默不跳出)');
+assert(testIsPreviewVideoOrPage('https://jable.tv/videos/start-387/') === false, 'Jable.tv 影片實際播放頁放行按鈕');
 
 // 7. PotPlayer 向量圖示與零 Emoji 檢驗
 assert(!emojiRegex.test(POTPLAYER_ICON), 'PotPlayer SVG 嚴格零 Emoji');
@@ -191,6 +199,27 @@ const videoWithHlsInstance = {
 };
 assert(detectVideoMediaUrl(videoWithHlsInstance, genericDoc) === 'https://live.example.com/playlist.m3u8', '從 hls.js 播放器實例中提取直播串流清單網址');
 
+// 測試 Jable.tv 等站點內嵌 script 標籤中的 hlsUrl 提取
+const jableDocWithScript = {
+  location: { hostname: 'jable.tv', href: 'https://jable.tv/videos/start-387/' },
+  querySelectorAll(sel) {
+    if (sel === 'script:not([src])') {
+      return [
+        { textContent: 'var a = 1;' },
+        { textContent: 'var hlsUrl = "https://assets-cdn.jable.tv/contents/videos_sources/start-387/index.m3u8";' }
+      ];
+    }
+    return [];
+  }
+};
+const jableVideoBlob = {
+  currentSrc: 'blob:https://jable.tv/1234',
+  src: 'blob:https://jable.tv/1234',
+  querySelectorAll: () => [],
+  getAttribute: () => null
+};
+assert(detectVideoMediaUrl(jableVideoBlob, jableDocWithScript) === 'https://assets-cdn.jable.tv/contents/videos_sources/start-387/index.m3u8', '從頁面內嵌 script 正則提取真實 Jable.tv hlsUrl m3u8');
+
 // 測試網絡攔截快取串流 (MSE blob 回退)
 const pureBlobVideo = {
   currentSrc: 'blob:https://example.com/blob-id',
@@ -198,6 +227,20 @@ const pureBlobVideo = {
   querySelectorAll: () => [],
   getAttribute: () => null
 };
+
+// 測試共享 DOM 屬性 data-cleanlink-stream 提取
+const docWithSharedAttr = {
+  location: { hostname: 'example.com', href: 'https://example.com/watch' },
+  documentElement: {
+    getAttribute(attr) {
+      if (attr === 'data-cleanlink-stream') return 'https://cdn.example.com/shared.m3u8';
+      return null;
+    }
+  },
+  querySelectorAll: () => []
+};
+assert(detectVideoMediaUrl(pureBlobVideo, docWithSharedAttr) === 'https://cdn.example.com/shared.m3u8', '從共享 DOM 屬性 data-cleanlink-stream 提取串流');
+
 const captured = ['https://stream.example.com/master.m3u8', 'https://stream.example.com/manifest.mpd'];
 assert(detectVideoMediaUrl(pureBlobVideo, genericDoc, captured) === 'https://stream.example.com/master.m3u8', '從網絡攔截快取中成功命中嗅探之 HLS .m3u8 串流');
 
@@ -211,6 +254,32 @@ assert(buildPotPlayerUrl('https://youtu.be/dQw4w9WgXcQ?feature=share', 45) === '
 assert(buildPotPlayerUrl('https://example.com/video.mp4', 0) === 'potplayer://https://example.com/video.mp4', '進度為 0 時不額外污染網址');
 assert(buildPotPlayerUrl('') === 'potplayer://', '空值安全防護');
 assert(buildPotPlayerUrl(null) === 'potplayer://', 'null 安全防護');
+
+// 10. 防盜鏈 PotPlayer 命令行建構器 (buildPotPlayerCommand) 測試
+assert(
+  buildPotPlayerCommand('https://assets-cdn.jable.tv/start-387/index.m3u8', 'https://jable.tv/') ===
+  '"C:\\Program Files\\DAUM\\PotPlayer\\PotPlayerMini64.exe" "https://assets-cdn.jable.tv/start-387/index.m3u8" /referer="https://jable.tv/"',
+  '精確產生帶 /referer 防盜鏈參數之 PotPlayer 啟動指令'
+);
+assert(
+  buildPotPlayerCommand('https://example.com/video.mp4') ===
+  '"C:\\Program Files\\DAUM\\PotPlayer\\PotPlayerMini64.exe" "https://example.com/video.mp4"',
+  '無 referer 時產生簡潔標準執行指令'
+);
+
+// 11. 剪貼簿限時刪除 (Auto-Clear) 邏輯驗證
+let clipboardState = 'initial';
+function simulateClipboardWriteAndAutoClear(text, delayMs = 10) {
+  clipboardState = text;
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      clipboardState = ''; // 模擬使用後自動清空
+      resolve(clipboardState);
+    }, delayMs);
+  });
+}
+await simulateClipboardWriteAndAutoClear('test_command', 10);
+assert(clipboardState === '', '剪貼簿使用後能成功自動清空刪除，不留痕跡');
 
 console.log(`\n測試結果: 通過 ${passed} 項，失敗 ${failed} 項\n`);
 

@@ -921,6 +921,18 @@
   let pipIdleTimer = null;
   let isHoveringPipButton = false;
   let currentPipState = null;
+  let localCapturedStreams = [];
+  let clipboardClearTimer = null;
+
+  // 監聽來自 MAIN 執行環境廣播之真實媒體串流
+  window.addEventListener('message', (event) => {
+    if (event && event.data && event.data.type === '__CLEANLINK_STREAM_DETECTED__' && event.data.url) {
+      if (!localCapturedStreams.includes(event.data.url)) {
+        localCapturedStreams.unshift(event.data.url);
+        if (localCapturedStreams.length > 30) localCapturedStreams.pop();
+      }
+    }
+  });
 
   // 與 YouTube 控制列閒置自動消逝時間同步 (約 2.5 秒)
   const PIP_IDLE_TIMEOUT = 2500;
@@ -982,14 +994,53 @@
       }
     }
 
-    // 5. 攔截到的網路串流快取 (如 m3u8, mpd)
-    if (window.__CLEANLINK_CAPTURED_STREAMS__ && window.__CLEANLINK_CAPTURED_STREAMS__.length > 0) {
-      return window.__CLEANLINK_CAPTURED_STREAMS__[0];
+    // 5. 常用自訂屬性
+    if (video && typeof video.getAttribute === 'function') {
+      const dataSrc = video.getAttribute('data-src') || video.getAttribute('data-url') || video.getAttribute('data-video-url');
+      if (dataSrc && !dataSrc.startsWith('blob:') && !dataSrc.startsWith('data:')) {
+        return dataSrc;
+      }
     }
 
-    // 6. 播放器物件實例 (hls.js / dplayer 等)
+    // 6. 播放器物件實例 (hls.js / plyr / dplayer 等)
     if (video && video.__hls__ && typeof video.__hls__.url === 'string') {
       return video.__hls__.url;
+    }
+    if (video && video.plyr && typeof video.plyr.source === 'string' && video.plyr.source) {
+      return video.plyr.source;
+    }
+
+    // 7. 檢查頁面內嵌 script 標籤中的 HLS 串流變數 (如 Jable.tv 的 hlsUrl = '...')
+    try {
+      const scripts = document.querySelectorAll('script:not([src])');
+      for (const sc of scripts) {
+        const text = sc.textContent || '';
+        if (text.includes('.m3u8')) {
+          const m = text.match(/(?:hlsUrl|videoUrl|streamUrl|sourceUrl)\s*=\s*['"]([^'"]+\.m3u8[^'"]*)['"]/i) ||
+                    text.match(/['"](https?:\/\/[^'"]+\.m3u8[^'"]*)['"]/i);
+          if (m && m[1]) {
+            return m[1];
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 8. 檢查共享 DOM 屬性 (由 MAIN 執行環境嗅探寫入)
+    try {
+      if (document.documentElement) {
+        const shared = document.documentElement.getAttribute('data-cleanlink-stream');
+        if (shared && !shared.startsWith('blob:') && !shared.startsWith('data:')) {
+          return shared;
+        }
+      }
+    } catch (_) {}
+
+    // 9. 攔截到的網路串流快取 (如 m3u8, mpd)
+    if (localCapturedStreams.length > 0) {
+      return localCapturedStreams[0];
+    }
+    if (window.__CLEANLINK_CAPTURED_STREAMS__ && window.__CLEANLINK_CAPTURED_STREAMS__.length > 0) {
+      return window.__CLEANLINK_CAPTURED_STREAMS__[0];
     }
 
     return pageUrl;
@@ -1054,6 +1105,20 @@
         a.click();
         a.remove();
       }
+
+      // 針對可能具備防盜鏈 (HTTP Referer) 的串流 (如 Jable.tv 等非 YT/Bili 的 m3u8)，靜默將完整命令行寫入剪貼簿備用
+      // 嚴格遵守規範：不用跳出訊息提醒已複製到剪貼簿，且使用完後 (10秒後) 自動從剪貼簿刪除
+      try {
+        const potCommand = `"C:\\Program Files\\DAUM\\PotPlayer\\PotPlayerMini64.exe" "${mediaUrl}" /referer="${location.origin}/"`;
+        navigator.clipboard.writeText(potCommand).then(() => {
+          if (clipboardClearTimer) clearTimeout(clipboardClearTimer);
+          clipboardClearTimer = setTimeout(() => {
+            try {
+              navigator.clipboard.writeText('');
+            } catch (_) {}
+          }, 10000); // 10秒後自動從剪貼簿清空刪除
+        }).catch(() => {});
+      } catch (_) {}
 
       const i18n = POTPLAYER_I18N[contentLanguage] || POTPLAYER_I18N['zh-TW'];
       const timeStr = currentTime > 0 ? ` (${formatTime(currentTime)})` : '';
@@ -1214,7 +1279,12 @@
       if (path.startsWith('/directory')) return true;
     }
 
-    // 5. 通用預覽容器與標籤特徵排除
+    // 5. Jable.tv: 僅在實際播放頁面 (/videos/) 啟用，排除首頁、標籤與卡片預覽
+    if (host.includes('jable.tv')) {
+      if (!path.startsWith('/videos/')) return true;
+    }
+
+    // 6. 通用預覽容器與標籤特徵排除
     if (video) {
       if (video.hasAttribute('data-preview') || video.getAttribute('data-purpose') === 'preview') {
         return true;
@@ -1237,7 +1307,7 @@
   function showPipButtonForVideo(video, playerRect = null, container = null) {
     if ((!enablePipHoverBtn && !enablePotPlayerBtn) || !video || isPreviewVideoOrPage(video)) return;
 
-    // 優先以播放器外層容器 (例如 YouTube #movie_player) 坐標為基準，確保位置始終恆定不跳動
+    // 優先以播放器外層容器 (例如 YouTube #movie_player, Plyr 等) 坐標為基準，確保位置始終恆定不跳動
     const playerContainer = container || video.closest([
       '#movie_player',
       '.html5-video-player',
@@ -1248,6 +1318,9 @@
       '.video-js',
       '.jwplayer',
       '.dplayer',
+      '.plyr',
+      '.plyr__video-wrapper',
+      '#site-player',
       '.player-container'
     ].join(','));
 
@@ -1324,6 +1397,9 @@
           '.video-js',
           '.jwplayer',
           '.dplayer',
+          '.plyr',
+          '.plyr__video-wrapper',
+          '#site-player',
           '.player-container'
         ].join(','));
 
