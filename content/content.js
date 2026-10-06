@@ -656,7 +656,9 @@
         radarAlertOnly: false,
         radarPosition: 'cursor-top-right',
         appLanguage: 'auto',
-        enablePipHoverBtn: true
+        enablePipHoverBtn: true,
+        enablePotPlayerBtn: true,
+        potplayerPauseWeb: true
       }, (res) => {
         if (res) {
           radarSettings.enableLinkRadar = res.enableLinkRadar !== false;
@@ -664,6 +666,8 @@
           radarSettings.radarPosition = res.radarPosition || 'cursor-top-right';
           contentLanguage = resolveContentLanguage(res.appLanguage);
           enablePipHoverBtn = res.enablePipHoverBtn !== false;
+          enablePotPlayerBtn = res.enablePotPlayerBtn !== false;
+          potplayerPauseWeb = res.potplayerPauseWeb !== false;
         }
       });
       chrome.storage.onChanged.addListener((changes, area) => {
@@ -677,7 +681,16 @@
           }
           if (changes.enablePipHoverBtn !== undefined) {
             enablePipHoverBtn = changes.enablePipHoverBtn.newValue;
-            if (!enablePipHoverBtn) hidePipButton();
+            if (pipButtonElement) pipButtonElement.style.display = enablePipHoverBtn ? 'flex' : 'none';
+            if (!enablePipHoverBtn && !enablePotPlayerBtn) hidePipButton();
+          }
+          if (changes.enablePotPlayerBtn !== undefined) {
+            enablePotPlayerBtn = changes.enablePotPlayerBtn.newValue;
+            if (potplayerButtonElement) potplayerButtonElement.style.display = enablePotPlayerBtn ? 'flex' : 'none';
+            if (!enablePipHoverBtn && !enablePotPlayerBtn) hidePipButton();
+          }
+          if (changes.potplayerPauseWeb !== undefined) {
+            potplayerPauseWeb = changes.potplayerPauseWeb.newValue;
           }
         }
       });
@@ -874,8 +887,35 @@
   const PIP_ENTER_ICON = '<svg viewBox="0 0 24 24" class="__cleanlink-pip-svg" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><rect x="12" y="10" width="8" height="6" rx="1" ry="1" fill="currentColor"></rect></svg>';
   const PIP_RESTORE_ICON = '<svg viewBox="0 0 24 24" class="__cleanlink-pip-svg" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><polyline points="13 14 16 11 19 14"></polyline><line x1="16" y1="11" x2="16" y2="17"></line></svg>';
 
+  const POTPLAYER_I18N = {
+    'zh-TW': {
+      title: '在 PotPlayer 中播放',
+      toast: '已在 PotPlayer 開啟影片'
+    },
+    'zh-CN': {
+      title: '在 PotPlayer 中播放',
+      toast: '已在 PotPlayer 开启视频'
+    },
+    'en': {
+      title: 'Play in PotPlayer',
+      toast: 'Opened in PotPlayer'
+    },
+    'ja': {
+      title: 'PotPlayer で再生',
+      toast: 'PotPlayer で開きました'
+    }
+  };
+
+  const POTPLAYER_ICON = '<svg viewBox="0 0 24 24" class="__cleanlink-pip-svg" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line><polygon points="10 7 16 10 10 13" fill="currentColor"></polygon></svg>';
+
   let enablePipHoverBtn = true;
+  let enablePotPlayerBtn = true;
+  let potplayerPauseWeb = true;
+  let pipContainerElement = null;
   let pipButtonElement = null;
+  let potplayerButtonElement = null;
+  let paperToastElement = null;
+  let paperToastTimer = null;
   let currentTargetVideo = null;
   let pipHideTimer = null;
   let pipIdleTimer = null;
@@ -885,14 +925,147 @@
   // 與 YouTube 控制列閒置自動消逝時間同步 (約 2.5 秒)
   const PIP_IDLE_TIMEOUT = 2500;
 
-  function getOrCreatePipButton() {
-    if (pipButtonElement) return pipButtonElement;
+  function showPaperToast(message) {
+    if (!paperToastElement) {
+      paperToastElement = document.createElement('div');
+      paperToastElement.className = '__cleanlink-paper-toast';
+      document.body.appendChild(paperToastElement);
+    }
+    paperToastElement.textContent = message;
+    paperToastElement.classList.add('__toast-visible');
+    clearTimeout(paperToastTimer);
+    paperToastTimer = setTimeout(() => {
+      if (paperToastElement) {
+        paperToastElement.classList.remove('__toast-visible');
+      }
+    }, 1800);
+  }
+
+  function formatTime(totalSeconds) {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  }
+
+  // 萬用視訊串流網址探測 (涵蓋 DOM 直鏈、HLS .m3u8、DASH .mpd、記憶體快取及平台正規化)
+  function localDetectVideoMediaUrl(video) {
+    const host = (location.hostname || '').toLowerCase();
+    const pageUrl = location.href;
+
+    // 1. YouTube & Bilibili 主流影音平台直接傳送網址 (PotPlayer 具備專屬解析)
+    if (host.includes('youtube.com') || host === 'youtu.be' || host.includes('bilibili.com')) {
+      return pageUrl;
+    }
+
+    // 2. 視訊 currentSrc (絕對直鏈)
+    if (video && typeof video.currentSrc === 'string' && video.currentSrc) {
+      if (!video.currentSrc.startsWith('blob:') && !video.currentSrc.startsWith('data:')) {
+        return video.currentSrc;
+      }
+    }
+
+    // 3. 視訊 src 屬性
+    if (video && typeof video.src === 'string' && video.src) {
+      if (!video.src.startsWith('blob:') && !video.src.startsWith('data:')) {
+        return video.src;
+      }
+    }
+
+    // 4. source 子標籤
+    if (video && typeof video.querySelectorAll === 'function') {
+      const sources = video.querySelectorAll('source');
+      for (const s of sources) {
+        const src = s.getAttribute('src') || s.src;
+        if (src && !src.startsWith('blob:') && !src.startsWith('data:')) {
+          return src;
+        }
+      }
+    }
+
+    // 5. 攔截到的網路串流快取 (如 m3u8, mpd)
+    if (window.__CLEANLINK_CAPTURED_STREAMS__ && window.__CLEANLINK_CAPTURED_STREAMS__.length > 0) {
+      return window.__CLEANLINK_CAPTURED_STREAMS__[0];
+    }
+
+    // 6. 播放器物件實例 (hls.js / dplayer 等)
+    if (video && video.__hls__ && typeof video.__hls__.url === 'string') {
+      return video.__hls__.url;
+    }
+
+    return pageUrl;
+  }
+
+  function localBuildPotPlayerUrl(rawUrl, currentTimeSeconds = 0) {
+    if (!rawUrl || typeof rawUrl !== 'string') return 'potplayer://';
+    let targetUrl = rawUrl.trim();
+    const seconds = Math.floor(currentTimeSeconds || 0);
+
+    if (seconds > 0 && (/youtube\.com|youtu\.be/i.test(targetUrl))) {
+      try {
+        const u = new URL(targetUrl);
+        u.searchParams.set('t', `${seconds}s`);
+        targetUrl = u.toString();
+      } catch (_) {
+        targetUrl += `${targetUrl.includes('?') ? '&' : '?'}t=${seconds}s`;
+      }
+    }
+
+    return `potplayer://${targetUrl}`;
+  }
+
+  function getOrCreatePipToolbar() {
+    if (pipContainerElement) return pipContainerElement;
+
+    pipContainerElement = document.createElement('div');
+    pipContainerElement.className = '__cleanlink-pip-container';
+
+    // 1. PotPlayer 按鈕
+    potplayerButtonElement = document.createElement('div');
+    potplayerButtonElement.className = '__cleanlink-pip-btn __cleanlink-potplayer-btn';
+    potplayerButtonElement.setAttribute('role', 'button');
+    potplayerButtonElement.setAttribute('tabindex', '0');
+    potplayerButtonElement.innerHTML = POTPLAYER_ICON;
+
+    potplayerButtonElement.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const video = currentTargetVideo || document.querySelector('video');
+      if (!video) return;
+
+      const currentTime = Math.floor(video.currentTime || 0);
+      const mediaUrl = localDetectVideoMediaUrl(video);
+      if (!mediaUrl) return;
+
+      // 暫停網頁影片，避免雙重播放與資源耗損
+      if (potplayerPauseWeb) {
+        try {
+          if (!video.paused) video.pause();
+        } catch (_) {}
+      }
+
+      const potUrl = localBuildPotPlayerUrl(mediaUrl, currentTime);
+      try {
+        window.location.href = potUrl;
+      } catch (_) {
+        const a = document.createElement('a');
+        a.href = potUrl;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      const i18n = POTPLAYER_I18N[contentLanguage] || POTPLAYER_I18N['zh-TW'];
+      const timeStr = currentTime > 0 ? ` (${formatTime(currentTime)})` : '';
+      showPaperToast(`${i18n.toast}${timeStr}`);
+    });
+
+    // 2. PiP 按鈕
     pipButtonElement = document.createElement('div');
     pipButtonElement.className = '__cleanlink-pip-btn';
     pipButtonElement.setAttribute('role', 'button');
     pipButtonElement.setAttribute('tabindex', '0');
 
-    // 點擊事件：手動切換子母畫面 (阻止事件冒泡，不影響原播放器暫停/播放)
     pipButtonElement.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -914,44 +1087,54 @@
       }
     });
 
-    pipButtonElement.addEventListener('mouseenter', () => {
+    pipContainerElement.addEventListener('mouseenter', () => {
       isHoveringPipButton = true;
       clearTimeout(pipHideTimer);
       clearTimeout(pipIdleTimer);
     });
 
-    pipButtonElement.addEventListener('mouseleave', () => {
+    pipContainerElement.addEventListener('mouseleave', () => {
       isHoveringPipButton = false;
       scheduleHidePipButton(250);
     });
 
-    document.body.appendChild(pipButtonElement);
-    return pipButtonElement;
+    pipContainerElement.appendChild(potplayerButtonElement);
+    pipContainerElement.appendChild(pipButtonElement);
+    document.body.appendChild(pipContainerElement);
+
+    return pipContainerElement;
   }
 
   function updatePipButtonContent(isInPip) {
     if (!pipButtonElement) return;
-    if (currentPipState === isInPip && pipButtonElement.firstElementChild) return;
-    currentPipState = isInPip;
-    const i18n = PIP_I18N[contentLanguage] || PIP_I18N['zh-TW'];
-    if (isInPip) {
-      pipButtonElement.classList.add('__pip-active');
-      pipButtonElement.title = i18n.restoreTitle;
-      pipButtonElement.setAttribute('aria-label', i18n.restoreTitle);
-      pipButtonElement.innerHTML = PIP_RESTORE_ICON;
-    } else {
-      pipButtonElement.classList.remove('__pip-active');
-      pipButtonElement.title = i18n.title;
-      pipButtonElement.setAttribute('aria-label', i18n.title);
-      pipButtonElement.innerHTML = PIP_ENTER_ICON;
+    if (currentPipState !== isInPip || !pipButtonElement.firstElementChild) {
+      currentPipState = isInPip;
+      const i18n = PIP_I18N[contentLanguage] || PIP_I18N['zh-TW'];
+      if (isInPip) {
+        pipButtonElement.classList.add('__pip-active');
+        pipButtonElement.title = i18n.restoreTitle;
+        pipButtonElement.setAttribute('aria-label', i18n.restoreTitle);
+        pipButtonElement.innerHTML = PIP_RESTORE_ICON;
+      } else {
+        pipButtonElement.classList.remove('__pip-active');
+        pipButtonElement.title = i18n.title;
+        pipButtonElement.setAttribute('aria-label', i18n.title);
+        pipButtonElement.innerHTML = PIP_ENTER_ICON;
+      }
+    }
+
+    if (potplayerButtonElement) {
+      const potI18n = POTPLAYER_I18N[contentLanguage] || POTPLAYER_I18N['zh-TW'];
+      potplayerButtonElement.title = potI18n.title;
+      potplayerButtonElement.setAttribute('aria-label', potI18n.title);
     }
   }
 
   function hidePipButton() {
     clearTimeout(pipHideTimer);
     clearTimeout(pipIdleTimer);
-    if (pipButtonElement) {
-      pipButtonElement.classList.remove('__cleanlink-pip-visible');
+    if (pipContainerElement) {
+      pipContainerElement.classList.remove('__cleanlink-pip-visible');
     }
     currentTargetVideo = null;
   }
@@ -1052,7 +1235,7 @@
   }
 
   function showPipButtonForVideo(video, playerRect = null, container = null) {
-    if (!enablePipHoverBtn || !video || isPreviewVideoOrPage(video)) return;
+    if ((!enablePipHoverBtn && !enablePotPlayerBtn) || !video || isPreviewVideoOrPage(video)) return;
 
     // 優先以播放器外層容器 (例如 YouTube #movie_player) 坐標為基準，確保位置始終恆定不跳動
     const playerContainer = container || video.closest([
@@ -1074,14 +1257,21 @@
     if (targetRect.right < 0 || targetRect.left > window.innerWidth) return;
 
     currentTargetVideo = video;
-    const btn = getOrCreatePipButton();
+    const toolbar = getOrCreatePipToolbar();
     const isInPip = document.pictureInPictureElement === video;
     updatePipButtonContent(isInPip);
 
+    if (pipButtonElement) {
+      pipButtonElement.style.display = enablePipHoverBtn ? 'flex' : 'none';
+    }
+    if (potplayerButtonElement) {
+      potplayerButtonElement.style.display = enablePotPlayerBtn ? 'flex' : 'none';
+    }
+
     // 支援全螢幕模式：在全螢幕下 append 至全螢幕容器確保可見
     const mountContainer = document.fullscreenElement || document.body;
-    if (btn.parentElement !== mountContainer) {
-      mountContainer.appendChild(btn);
+    if (toolbar.parentElement !== mountContainer) {
+      mountContainer.appendChild(toolbar);
     }
 
     // 依使用者需求避開原生播放器右上角控制項並微調最佳間距：
@@ -1095,12 +1285,12 @@
     if (top < OFFSET_TOP) top = OFFSET_TOP;
     if (right < OFFSET_RIGHT) right = OFFSET_RIGHT;
 
-    btn.style.top = `${Math.round(top)}px`;
-    btn.style.right = `${Math.round(right)}px`;
-    btn.style.left = 'auto';
-    btn.style.bottom = 'auto';
+    toolbar.style.top = `${Math.round(top)}px`;
+    toolbar.style.right = `${Math.round(right)}px`;
+    toolbar.style.left = 'auto';
+    toolbar.style.bottom = 'auto';
 
-    btn.classList.add('__cleanlink-pip-visible');
+    toolbar.classList.add('__cleanlink-pip-visible');
     clearTimeout(pipHideTimer);
     resetPipIdleTimer(); // 啟動「放置一陣子自動消逝」計時器 (2.5s 與 YT 控制列同步)
   }
@@ -1181,25 +1371,25 @@
 
   let lastPipCheckTime = 0;
   document.addEventListener('mousemove', (e) => {
-    if (!enablePipHoverBtn) return;
+    if (!enablePipHoverBtn && !enablePotPlayerBtn) return;
 
     // 若整頁為預覽頁面，確保按鈕隱藏並直接返回，杜絕多餘運算
     if (isPreviewVideoOrPage(null)) {
-      if (pipButtonElement && pipButtonElement.classList.contains('__cleanlink-pip-visible')) {
+      if (pipContainerElement && pipContainerElement.classList.contains('__cleanlink-pip-visible')) {
         hidePipButton();
       }
       return;
     }
 
-    // 優先判定：游標在按鈕本身上方或 8px 緩衝區內，強固鎖定為 hover 狀態，絕不隱藏
-    if (pipButtonElement && pipButtonElement.classList.contains('__cleanlink-pip-visible')) {
-      if (pipButtonElement === e.target || pipButtonElement.contains(e.target)) {
+    // 優先判定：游標在懸浮工具列本身上方或 8px 緩衝區內，強固鎖定為 hover 狀態，絕不隱藏
+    if (pipContainerElement && pipContainerElement.classList.contains('__cleanlink-pip-visible')) {
+      if (pipContainerElement === e.target || pipContainerElement.contains(e.target)) {
         isHoveringPipButton = true;
         clearTimeout(pipHideTimer);
         clearTimeout(pipIdleTimer);
         return;
       }
-      const bRect = pipButtonElement.getBoundingClientRect();
+      const bRect = pipContainerElement.getBoundingClientRect();
       if (
         e.clientX >= bRect.left - 8 &&
         e.clientX <= bRect.right + 8 &&

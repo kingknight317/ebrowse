@@ -181,4 +181,57 @@
   } catch (err) {
     console.warn('[StreamBooster] 無法攔截 Hls.js:', err);
   }
+
+  /* -------------------------------------------------------------
+   * 方案 5：全網影音串流嗅探 (HLS .m3u8, DASH .mpd, MP4/WebM 直鏈)
+   * ----------------------------------------------------------- */
+  window.__CLEANLINK_CAPTURED_STREAMS__ = window.__CLEANLINK_CAPTURED_STREAMS__ || [];
+
+  function recordMediaStream(url) {
+    if (!url || typeof url !== 'string') return;
+    if (url.startsWith('blob:') || url.startsWith('data:')) return;
+    try {
+      const parsed = new URL(url, window.location.href).href;
+      // 識別 HLS (.m3u8)、DASH (.mpd)、或標準視訊直鏈 (.mp4, .webm)
+      if (
+        /\.(m3u8|mpd|mp4|webm|flv)(\?|#|$)/i.test(parsed) ||
+        /(master|playlist|manifest|chunklist)\.m3u8/i.test(parsed)
+      ) {
+        if (!window.__CLEANLINK_CAPTURED_STREAMS__.includes(parsed)) {
+          window.__CLEANLINK_CAPTURED_STREAMS__.unshift(parsed);
+          if (window.__CLEANLINK_CAPTURED_STREAMS__.length > 30) {
+            window.__CLEANLINK_CAPTURED_STREAMS__.pop();
+          }
+          window.dispatchEvent(new CustomEvent('__CLEANLINK_STREAM_DETECTED__', { detail: { url: parsed } }));
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 1. Hook window.fetch
+  try {
+    if (typeof window.fetch === 'function') {
+      const origFetch = window.fetch;
+      window.fetch = function (input, init) {
+        if (typeof input === 'string') {
+          recordMediaStream(input);
+        } else if (input && input.url) {
+          recordMediaStream(input.url);
+        }
+        return origFetch.apply(this, arguments);
+      };
+    }
+  } catch (_) {}
+
+  // 2. Hook XMLHttpRequest.prototype.open
+  try {
+    if (window.XMLHttpRequest && window.XMLHttpRequest.prototype) {
+      const origOpen = window.XMLHttpRequest.prototype.open;
+      window.XMLHttpRequest.prototype.open = function (method, url) {
+        recordMediaStream(url);
+        return origOpen.apply(this, arguments);
+      };
+    }
+  } catch (_) {}
 })();
+

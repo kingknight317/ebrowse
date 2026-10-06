@@ -50,7 +50,8 @@ const DEFAULT_SETTINGS = {
   boosterDisableAV1: true,
   boosterQuality: '1080p',
   boosterExpandHLS: true,
-  enablePipHoverBtn: true
+  enablePipHoverBtn: true,
+  enablePotPlayerBtn: true
 };
 
 const settingKeys = Object.keys(DEFAULT_SETTINGS);

@@ -187,12 +187,29 @@
 }
 
 /* ==========================================================================
-   Universal PiP (Picture-in-Picture) Hover Button
+   Universal PiP & PotPlayer Floating Video Capsule
    ========================================================================== */
 
-.__cleanlink-pip-btn {
+.__cleanlink-pip-container {
   position: fixed !important;
   z-index: 2147483647 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  pointer-events: auto !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: scale(0.92) !important;
+  transition: opacity 0.18s cubic-bezier(0, 0, 0.2, 1), transform 0.18s cubic-bezier(0, 0, 0.2, 1), visibility 0.18s ease !important;
+}
+
+.__cleanlink-pip-container.__cleanlink-pip-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: scale(1) !important;
+}
+
+.__cleanlink-pip-btn {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -209,16 +226,7 @@
   cursor: pointer !important;
   user-select: none !important;
   pointer-events: auto !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  transform: scale(0.92) !important;
-  transition: opacity 0.18s cubic-bezier(0, 0, 0.2, 1), transform 0.18s cubic-bezier(0, 0, 0.2, 1), visibility 0.18s ease, background-color 0.10s ease, border-color 0.10s ease !important;
-}
-
-.__cleanlink-pip-btn.__cleanlink-pip-visible {
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: scale(1) !important;
+  transition: background-color 0.10s ease, border-color 0.10s ease, transform 0.10s ease, box-shadow 0.10s ease !important;
 }
 
 .__cleanlink-pip-btn:hover {
@@ -236,6 +244,41 @@
   background: rgba(180, 83, 9, 0.82) !important;
   border-color: rgba(245, 158, 11, 0.5) !important;
   color: #ffffff !important;
+}
+
+.__cleanlink-potplayer-btn:hover {
+  background: rgba(41, 37, 36, 0.95) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  color: #fbbf24 !important;
+}
+
+.__cleanlink-paper-toast {
+  position: fixed !important;
+  top: 24px !important;
+  left: 50% !important;
+  transform: translateX(-50%) translateY(-10px) !important;
+  z-index: 2147483647 !important;
+  background: rgba(28, 25, 23, 0.92) !important;
+  color: #fbfaf8 !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(231, 229, 223, 0.28) !important;
+  border-radius: 7px !important;
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  letter-spacing: 0.2px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: opacity 0.2s cubic-bezier(0, 0, 0.2, 1), transform 0.2s cubic-bezier(0, 0, 0.2, 1), visibility 0.2s ease !important;
+}
+
+.__cleanlink-paper-toast.__toast-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateX(-50%) translateY(0) !important;
 }
 
 .__cleanlink-pip-svg {

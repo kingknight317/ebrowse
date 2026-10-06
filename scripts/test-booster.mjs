@@ -1,4 +1,12 @@
-import { mapToYouTubeQuality, isAV1Codec, expandHlsConfig, QUALITY_MAP } from '../lib/stream-booster.js';
+import {
+  mapToYouTubeQuality,
+  isAV1Codec,
+  expandHlsConfig,
+  QUALITY_MAP,
+  POTPLAYER_ICON,
+  detectVideoMediaUrl,
+  buildPotPlayerUrl
+} from '../lib/stream-booster.js';
 
 let passed = 0;
 let failed = 0;
@@ -121,6 +129,88 @@ assert(testIsPreviewVideoOrPage('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
 }) === true, 'YouTube 播放頁側欄推薦卡片預覽 (精確攔截排除)');
 assert(testIsPreviewVideoOrPage('https://www.bilibili.com/') === true, 'Bilibili 首頁判定為預覽頁 (靜默不跳出)');
 assert(testIsPreviewVideoOrPage('https://www.bilibili.com/video/BV1xx411c7X') === false, 'Bilibili 影片播放頁判定為正常播放 (放行按鈕)');
+
+// 7. PotPlayer 向量圖示與零 Emoji 檢驗
+assert(!emojiRegex.test(POTPLAYER_ICON), 'PotPlayer SVG 嚴格零 Emoji');
+assert(POTPLAYER_ICON.includes('<polygon') && POTPLAYER_ICON.includes('<rect'), 'PotPlayer SVG 具備標準幾何螢幕與播放三角向量路徑');
+
+// 8. 萬用視訊串流網址探測引擎 (detectVideoMediaUrl) 測試
+const ytMockDoc = {
+  location: { hostname: 'www.youtube.com', href: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }
+};
+assert(detectVideoMediaUrl(null, ytMockDoc) === 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'YouTube 平台優先傳送完整頁面 URL');
+
+const biliMockDoc = {
+  location: { hostname: 'www.bilibili.com', href: 'https://www.bilibili.com/video/BV1xx411c7X' }
+};
+assert(detectVideoMediaUrl(null, biliMockDoc) === 'https://www.bilibili.com/video/BV1xx411c7X', 'Bilibili 平台優先傳送完整頁面 URL');
+
+const genericDoc = {
+  location: { hostname: 'example.com', href: 'https://example.com/movie' }
+};
+
+// 測試 currentSrc (排除 blob: 並優先取得直鏈)
+const videoWithBlobCurrentSrc = {
+  currentSrc: 'blob:https://example.com/1234-5678',
+  src: 'https://example.com/direct-video.mp4'
+};
+assert(detectVideoMediaUrl(videoWithBlobCurrentSrc, genericDoc) === 'https://example.com/direct-video.mp4', '排除 blob:currentSrc 並自動回退至 src 直鏈');
+
+// 測試 source 子標籤
+const videoWithSource = {
+  currentSrc: 'blob:https://example.com/blob-id',
+  src: '',
+  querySelectorAll(sel) {
+    if (sel === 'source') {
+      return [{ getAttribute: () => 'https://cdn.example.com/source-stream.m3u8' }];
+    }
+    return [];
+  }
+};
+assert(detectVideoMediaUrl(videoWithSource, genericDoc) === 'https://cdn.example.com/source-stream.m3u8', '從 source 子標籤提取 HLS .m3u8 直鏈');
+
+// 測試 data-src 自訂屬性
+const videoWithDataSrc = {
+  currentSrc: '',
+  src: '',
+  querySelectorAll: () => [],
+  getAttribute(attr) {
+    if (attr === 'data-src') return 'https://video.example.com/file.mp4';
+    return null;
+  }
+};
+assert(detectVideoMediaUrl(videoWithDataSrc, genericDoc) === 'https://video.example.com/file.mp4', '從 data-src 屬性提取直鏈');
+
+// 測試 hls.js 物件實例屬性
+const videoWithHlsInstance = {
+  currentSrc: 'blob:https://example.com/blob-id',
+  src: '',
+  querySelectorAll: () => [],
+  getAttribute: () => null,
+  __hls__: { url: 'https://live.example.com/playlist.m3u8' }
+};
+assert(detectVideoMediaUrl(videoWithHlsInstance, genericDoc) === 'https://live.example.com/playlist.m3u8', '從 hls.js 播放器實例中提取直播串流清單網址');
+
+// 測試網絡攔截快取串流 (MSE blob 回退)
+const pureBlobVideo = {
+  currentSrc: 'blob:https://example.com/blob-id',
+  src: '',
+  querySelectorAll: () => [],
+  getAttribute: () => null
+};
+const captured = ['https://stream.example.com/master.m3u8', 'https://stream.example.com/manifest.mpd'];
+assert(detectVideoMediaUrl(pureBlobVideo, genericDoc, captured) === 'https://stream.example.com/master.m3u8', '從網絡攔截快取中成功命中嗅探之 HLS .m3u8 串流');
+
+// 測試無串流時回退當前頁面
+assert(detectVideoMediaUrl(pureBlobVideo, genericDoc, []) === 'https://example.com/movie', '無任何串流直鏈時優雅回退當前頁面 URL');
+
+// 9. PotPlayer 協議與時間戳建構器 (buildPotPlayerUrl) 測試
+assert(buildPotPlayerUrl('https://example.com/video.mp4') === 'potplayer://https://example.com/video.mp4', '標準直鏈正確產生 potplayer:// 前綴');
+assert(buildPotPlayerUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ', 125) === 'potplayer://https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=125s', 'YouTube 影片精確附加 &t=125s 時間戳');
+assert(buildPotPlayerUrl('https://youtu.be/dQw4w9WgXcQ?feature=share', 45) === 'potplayer://https://youtu.be/dQw4w9WgXcQ?feature=share&t=45s', 'YouTube 短網址帶參照數時精確附加 &t=45s');
+assert(buildPotPlayerUrl('https://example.com/video.mp4', 0) === 'potplayer://https://example.com/video.mp4', '進度為 0 時不額外污染網址');
+assert(buildPotPlayerUrl('') === 'potplayer://', '空值安全防護');
+assert(buildPotPlayerUrl(null) === 'potplayer://', 'null 安全防護');
 
 console.log(`\n測試結果: 通過 ${passed} 項，失敗 ${failed} 項\n`);
 
