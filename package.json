@@ -1,6 +1,6 @@
 ﻿{
     "name":  "ebrowse",
-    "version":  "1.0.2",
+    "version":  "1.0.3",
     "type":  "module",
     "description":  "專為鍵盤狂人設計的**新世代純淨網址與深度正規化分享助手**。",
     "main":  "index.js",
