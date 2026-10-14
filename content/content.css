@@ -200,6 +200,8 @@
   opacity: 0 !important;
   visibility: hidden !important;
   transform: scale(0.92) !important;
+  contain: layout style !important;
+  will-change: opacity, transform !important;
   transition: opacity 0.18s cubic-bezier(0, 0, 0.2, 1), transform 0.18s cubic-bezier(0, 0, 0.2, 1), visibility 0.18s ease !important;
 }
 
@@ -218,8 +220,8 @@
   padding: 0 !important;
   background: rgba(28, 25, 23, 0.78) !important;
   color: #fbfaf8 !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border: 1px solid rgba(231, 229, 223, 0.22) !important;
   border-radius: 7px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2) !important;
@@ -227,6 +229,11 @@
   user-select: none !important;
   pointer-events: auto !important;
   transition: background-color 0.10s ease, border-color 0.10s ease, transform 0.10s ease, box-shadow 0.10s ease !important;
+}
+
+.__cleanlink-pip-container.__cleanlink-pip-visible .__cleanlink-pip-btn {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
 }
 
 .__cleanlink-pip-btn:hover {

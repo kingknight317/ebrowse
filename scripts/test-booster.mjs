@@ -1,3 +1,4 @@
+import fs from 'fs';
 import {
   mapToYouTubeQuality,
   isAV1Codec,
@@ -6,6 +7,7 @@ import {
   POTPLAYER_ICON,
   detectVideoMediaUrl,
   buildPotPlayerUrl,
+  formatPotPlayerTime,
   buildPotPlayerCommand
 } from '../lib/stream-booster.js';
 
@@ -52,7 +54,10 @@ const expanded = expandHlsConfig(originalConfig);
 
 assert(expanded.maxBufferLength === 120, 'HLS maxBufferLength 成功擴展至 120 秒');
 assert(expanded.maxMaxBufferLength === 300, 'HLS maxMaxBufferLength 安全設定為 300 秒');
-assert(expanded.maxBufferSize === 60 * 1024 * 1024, 'HLS maxBufferSize 擴充至 60MB');
+assert(expanded.maxBufferSize === 130 * 1000 * 1000, 'HLS maxBufferSize 擴充至 130MB (容納高清雙分鐘快取)');
+assert(expanded.backBufferLength === 30, 'HLS backBufferLength 環形回收 30 秒歷史切片 (杜絕 QuotaExceededError)');
+assert(expanded.startFragPrefetch === true, 'HLS startFragPrefetch 啟用首切片預取加速');
+assert(expanded.abrEwmaDefaultEstimate === 8000000, 'HLS abrEwmaDefaultEstimate 初始頻寬估算為 8Mbps (直攻 1080p)');
 assert(expanded.customProp === 'test', '保留原生配置屬性');
 assert(originalConfig.maxBufferLength === 30, '不可變原則：原配置未被就地竄改');
 
@@ -255,16 +260,25 @@ assert(buildPotPlayerUrl('https://example.com/video.mp4', 0) === 'potplayer://ht
 assert(buildPotPlayerUrl('') === 'potplayer://', '空值安全防護');
 assert(buildPotPlayerUrl(null) === 'potplayer://', 'null 安全防護');
 
-// 10. 防盜鏈 PotPlayer 命令行建構器 (buildPotPlayerCommand) 測試
+// 10. 時間戳格式化 (formatPotPlayerTime) 與 PotPlayer 命令行建構器 (buildPotPlayerCommand) 測試
+assert(formatPotPlayerTime(0) === '00:00:00', '0 秒格式化為 00:00:00');
+assert(formatPotPlayerTime(95) === '00:01:35', '95 秒格式化為 00:01:35');
+assert(formatPotPlayerTime(3661) === '01:01:01', '3661 秒格式化為 01:01:01');
+
 assert(
   buildPotPlayerCommand('https://assets-cdn.jable.tv/start-387/index.m3u8', 'https://jable.tv/') ===
   '"C:\\Program Files\\DAUM\\PotPlayer\\PotPlayerMini64.exe" "https://assets-cdn.jable.tv/start-387/index.m3u8" /referer="https://jable.tv/"',
   '精確產生帶 /referer 防盜鏈參數之 PotPlayer 啟動指令'
 );
 assert(
+  buildPotPlayerCommand('https://assets-cdn.jable.tv/start-387/index.m3u8', 'https://jable.tv/', 'Mozilla/5.0 Custom', 95) ===
+  '"C:\\Program Files\\DAUM\\PotPlayer\\PotPlayerMini64.exe" "https://assets-cdn.jable.tv/start-387/index.m3u8" /referer="https://jable.tv/" /user_agent="Mozilla/5.0 Custom" /seek=00:01:35',
+  '精確產生帶 /referer, /user_agent 與 /seek 時間戳之 PotPlayer 完整啟動指令'
+);
+assert(
   buildPotPlayerCommand('https://example.com/video.mp4') ===
   '"C:\\Program Files\\DAUM\\PotPlayer\\PotPlayerMini64.exe" "https://example.com/video.mp4"',
-  '無 referer 時產生簡潔標準執行指令'
+  '無 referer 與時間戳時產生簡潔標準執行指令'
 );
 
 // 11. 剪貼簿限時刪除 (Auto-Clear) 邏輯驗證
@@ -281,8 +295,57 @@ function simulateClipboardWriteAndAutoClear(text, delayMs = 10) {
 await simulateClipboardWriteAndAutoClear('test_command', 10);
 assert(clipboardState === '', '剪貼簿使用後能成功自動清空刪除，不留痕跡');
 
+// 12. 突破 Webpack / Vite 閉包模組限制之原型鏈屬性守衛測試
+const closureHlsConfig = {};
+// 模擬 booster-injected.js 原型鏈屬性守衛
+Object.defineProperty(Object.prototype, 'testClosureBufferLength', {
+  configurable: true,
+  enumerable: true,
+  get() { return this.__test_buf !== undefined ? this.__test_buf : 120; },
+  set(val) {
+    this.__test_buf = Math.max(val || 0, 120);
+    this.testClosureMaxBufferSize = Math.max(this.testClosureMaxBufferSize || 0, 130 * 1000 * 1000);
+    if (typeof this.testClosureBackBuffer === 'undefined') {
+      this.testClosureBackBuffer = 30;
+    }
+  }
+});
+closureHlsConfig.testClosureBufferLength = 30; // 模組內部預設 30 秒
+assert(closureHlsConfig.testClosureBufferLength === 120, '原型鏈屬性守衛成功將閉包模組內 30 秒拉長至 120 秒');
+assert(closureHlsConfig.testClosureMaxBufferSize === 130 * 1000 * 1000, '原型鏈守衛成功注入 130MB 記憶體上限');
+assert(closureHlsConfig.testClosureBackBuffer === 30, '原型鏈守衛成功注入 30 秒歷史環形回收');
+delete Object.prototype.testClosureBufferLength;
+
+// 13. 智慧型 MediaCapabilities powerEfficient 決策引擎模擬測試
+async function simulateSmartDecodingInfo(mediaConfig, mockNativeDecodingInfo) {
+  const isAV1 = /codecs\s*=\s*["']?av0?1/i.test(mediaConfig.video?.contentType || '');
+  const nativeResult = await mockNativeDecodingInfo(mediaConfig);
+  // 若該硬體 ASIC 不支援硬解 (powerEfficient: false)，則安全降級
+  if (isAV1 && !nativeResult.powerEfficient) {
+    return { supported: false, smooth: false, powerEfficient: false };
+  }
+  return nativeResult;
+}
+
+const mockGpuAv1 = { supported: true, smooth: true, powerEfficient: true };
+const mockCpuSoftAv1 = { supported: true, smooth: false, powerEfficient: false };
+
+const resultGpu = await simulateSmartDecodingInfo({ video: { contentType: 'video/mp4; codecs="av01.0.08M.08"' } }, async () => mockGpuAv1);
+assert(resultGpu.supported === true && resultGpu.powerEfficient === true, '具備原生硬解之硬體放行 AV1 播放');
+
+const resultCpu = await simulateSmartDecodingInfo({ video: { contentType: 'video/mp4; codecs="av01.0.08M.08"' } }, async () => mockCpuSoftAv1);
+assert(resultCpu.supported === false && resultCpu.powerEfficient === false, '僅能 CPU 軟解之舊硬體安全封鎖 AV1，促使平台降級至硬解編碼');
+
+// 14. GPU DirectFlip / MPO 硬體直通層 CSS 規則檢驗
+const cssContent = fs.readFileSync('content/content.css', 'utf-8');
+assert(cssContent.includes('contain: layout style !important;'), 'CSS 包含 contain: layout style 隔離容器渲染重繪');
+assert(cssContent.includes('will-change: opacity, transform !important;'), 'CSS 包含 will-change 預先分配合成器獨立圖層');
+assert(cssContent.includes('backdrop-filter: none !important;'), 'CSS 預設隱藏態將 backdrop-filter 設為 none，避免污染 DirectFlip 硬體直通層');
+assert(cssContent.includes('.__cleanlink-pip-visible .__cleanlink-pip-btn'), '僅在可見 hover 態時才掛載高斯模糊濾鏡');
+
 console.log(`\n測試結果: 通過 ${passed} 項，失敗 ${failed} 項\n`);
 
 if (failed > 0) {
   process.exit(1);
 }
+

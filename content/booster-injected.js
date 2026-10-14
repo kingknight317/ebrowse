@@ -54,10 +54,42 @@
     return /codecs\s*=\s*["']?av0?1/i.test(type);
   }
 
+  function isVP9(type) {
+    if (typeof type !== 'string') return false;
+    return /codecs\s*=\s*["']?vp0?9/i.test(type);
+  }
+
   /* -------------------------------------------------------------
-   * 方案 2：優先 GPU 硬體解碼（阻止 AV1 軟解請求）
+   * 方案 2：智慧型 GPU 硬體解碼決策引擎 (MediaCapabilities / MSE)
    * ----------------------------------------------------------- */
   try {
+    if (navigator.mediaCapabilities && typeof navigator.mediaCapabilities.decodingInfo === 'function') {
+      const origDecodingInfo = navigator.mediaCapabilities.decodingInfo.bind(navigator.mediaCapabilities);
+      navigator.mediaCapabilities.decodingInfo = async function (mediaConfig) {
+        if (!config.enableStreamBooster) {
+          return origDecodingInfo(mediaConfig);
+        }
+
+        const contentType = mediaConfig?.video?.contentType || '';
+
+        // 1. 若開啟強制封鎖 AV1，直接回傳不支援
+        if (config.boosterDisableAV1 && isAV1(contentType)) {
+          return { supported: false, smooth: false, powerEfficient: false };
+        }
+
+        // 2. 智慧模式：實測底層硬體 ASIC 能力，若為高負擔 CPU 軟解則促使安全降級至硬解編碼
+        try {
+          const result = await origDecodingInfo(mediaConfig);
+          if (config.boosterDisableAV1 && !result.powerEfficient && (isAV1(contentType) || isVP9(contentType))) {
+            return { supported: false, smooth: false, powerEfficient: false };
+          }
+          return result;
+        } catch (_) {
+          return origDecodingInfo(mediaConfig);
+        }
+      };
+    }
+
     if (typeof window.MediaSource !== 'undefined' && typeof window.MediaSource.isTypeSupported === 'function') {
       const origIsTypeSupported = window.MediaSource.isTypeSupported.bind(window.MediaSource);
       window.MediaSource.isTypeSupported = function (type) {
@@ -129,7 +161,7 @@
   }, true);
 
   /* -------------------------------------------------------------
-   * 方案 4：開源播放器前瞻快取擴展 (Hls.js / Dash.js)
+   * 方案 4：開源播放器前瞻快取擴展與閉包突破 (Hls.js / Dash.js)
    * ----------------------------------------------------------- */
   function patchHlsConstructor(OriginalHls) {
     if (!OriginalHls || OriginalHls.__stream_booster_patched) return OriginalHls;
@@ -139,7 +171,16 @@
       if (config.enableStreamBooster && config.boosterExpandHLS) {
         cfg.maxBufferLength = Math.max(cfg.maxBufferLength || 0, 120);
         cfg.maxMaxBufferLength = Math.max(cfg.maxMaxBufferLength || 0, 300);
-        cfg.maxBufferSize = Math.max(cfg.maxBufferSize || 0, 60 * 1024 * 1024);
+        cfg.maxBufferSize = Math.max(cfg.maxBufferSize || 0, 130 * 1000 * 1000); // 130MB 容納高清雙分鐘快取
+        if (typeof cfg.backBufferLength === 'undefined' || cfg.backBufferLength === Infinity) {
+          cfg.backBufferLength = 30; // 環形回收 30 秒前歷史切片，杜絕 QuotaExceededError
+        }
+        if (typeof cfg.startFragPrefetch === 'undefined') {
+          cfg.startFragPrefetch = true;
+        }
+        if (typeof cfg.abrEwmaDefaultEstimate === 'undefined' || cfg.abrEwmaDefaultEstimate < 8000000) {
+          cfg.abrEwmaDefaultEstimate = 8000000; // 8 Mbps 初始頻寬，直攻 1080p
+        }
         if (typeof cfg.highBufferWatchdogPeriod === 'undefined') {
           cfg.highBufferWatchdogPeriod = 3;
         }
@@ -172,6 +213,7 @@
     return PatchedHls;
   }
 
+  // 1. 攔截全域 window.Hls
   try {
     let _hlsInstance = window.Hls;
     if (_hlsInstance) {
@@ -191,6 +233,38 @@
   } catch (err) {
     console.warn('[StreamBooster] 無法攔截 Hls.js:', err);
   }
+
+  // 2. 突破 Webpack / Vite 閉包模組限制之原型鏈屬性守衛
+  try {
+    const desc = Object.getOwnPropertyDescriptor(Object.prototype, 'maxBufferLength');
+    if (!desc || desc.configurable) {
+      Object.defineProperty(Object.prototype, 'maxBufferLength', {
+        configurable: true,
+        enumerable: true,
+        get: function () {
+          return this.__cl_maxBufferLength !== undefined ? this.__cl_maxBufferLength : 120;
+        },
+        set: function (val) {
+          if (config.enableStreamBooster && config.boosterExpandHLS) {
+            this.__cl_maxBufferLength = Math.max(val || 0, 120);
+            this.maxMaxBufferLength = Math.max(this.maxMaxBufferLength || 0, 300);
+            this.maxBufferSize = Math.max(this.maxBufferSize || 0, 130 * 1000 * 1000);
+            if (typeof this.backBufferLength === 'undefined' || this.backBufferLength === Infinity) {
+              this.backBufferLength = 30; // 30秒歷史緩衝環形回收
+            }
+            if (typeof this.startFragPrefetch === 'undefined') {
+              this.startFragPrefetch = true;
+            }
+            if (typeof this.abrEwmaDefaultEstimate === 'undefined' || this.abrEwmaDefaultEstimate < 8000000) {
+              this.abrEwmaDefaultEstimate = 8000000;
+            }
+          } else {
+            this.__cl_maxBufferLength = val;
+          }
+        }
+      });
+    }
+  } catch (_) {}
 
   /* -------------------------------------------------------------
    * 方案 5：全網影音串流嗅探 (HLS .m3u8, DASH .mpd, MP4/WebM 直鏈)
@@ -220,12 +294,26 @@
             }
           } catch (_) {}
 
-          // 2. 透過 postMessage 進行雙向安全廣播
+          // 2. 自動對跨網域媒體 CDN 分片伺服器注入 preconnect 提升首次交握速度
+          try {
+            const streamOrigin = new URL(parsed).origin;
+            if (streamOrigin && streamOrigin !== window.location.origin) {
+              if (document.head && !document.querySelector(`link[rel="preconnect"][href^="${streamOrigin}"]`)) {
+                const preLink = document.createElement('link');
+                preLink.rel = 'preconnect';
+                preLink.href = streamOrigin;
+                preLink.crossOrigin = 'anonymous';
+                document.head.appendChild(preLink);
+              }
+            }
+          } catch (_) {}
+
+          // 3. 透過 postMessage 進行雙向安全廣播
           try {
             window.postMessage({ type: '__CLEANLINK_STREAM_DETECTED__', url: parsed }, '*');
           } catch (_) {}
 
-          // 3. 派發原生自訂事件
+          // 4. 派發原生自訂事件
           window.dispatchEvent(new CustomEvent('__CLEANLINK_STREAM_DETECTED__', { detail: { url: parsed } }));
         }
       }

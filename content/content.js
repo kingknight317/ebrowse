@@ -1046,6 +1046,34 @@
     return pageUrl;
   }
 
+  function localFormatPotPlayerTime(seconds) {
+    const s = Math.max(0, Math.floor(seconds || 0));
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+    return [hrs, mins, secs].map(v => String(v).padStart(2, '0')).join(':');
+  }
+
+  function localBuildPotPlayerCommand(mediaUrl, refererUrl = '', userAgent = '', currentTimeSeconds = 0) {
+    const potPath = 'C:\\Program Files\\DAUM\\PotPlayer\\PotPlayerMini64.exe';
+    const cleanMedia = (mediaUrl || '').trim();
+    const cleanRef = (refererUrl || '').trim();
+    const cleanUa = (userAgent || '').trim();
+    const seconds = Math.floor(currentTimeSeconds || 0);
+
+    const parts = [`"${potPath}"`, `"${cleanMedia}"`];
+    if (cleanRef) {
+      parts.push(`/referer="${cleanRef}"`);
+    }
+    if (cleanUa) {
+      parts.push(`/user_agent="${cleanUa}"`);
+    }
+    if (seconds > 0) {
+      parts.push(`/seek=${localFormatPotPlayerTime(seconds)}`);
+    }
+    return parts.join(' ');
+  }
+
   function localBuildPotPlayerUrl(rawUrl, currentTimeSeconds = 0) {
     if (!rawUrl || typeof rawUrl !== 'string') return 'potplayer://';
     let targetUrl = rawUrl.trim();
@@ -1107,9 +1135,10 @@
       }
 
       // 針對可能具備防盜鏈 (HTTP Referer) 的串流 (如 Jable.tv 等非 YT/Bili 的 m3u8)，靜默將完整命令行寫入剪貼簿備用
+      // 包含 /referer、/user_agent 與萬用 /seek=HH:MM:SS
       // 嚴格遵守規範：不用跳出訊息提醒已複製到剪貼簿，且使用完後 (10秒後) 自動從剪貼簿刪除
       try {
-        const potCommand = `"C:\\Program Files\\DAUM\\PotPlayer\\PotPlayerMini64.exe" "${mediaUrl}" /referer="${location.origin}/"`;
+        const potCommand = localBuildPotPlayerCommand(mediaUrl, `${location.origin}/`, navigator.userAgent, currentTime);
         navigator.clipboard.writeText(potCommand).then(() => {
           if (clipboardClearTimer) clearTimeout(clipboardClearTimer);
           clipboardClearTimer = setTimeout(() => {
@@ -1383,6 +1412,14 @@
       }
     }
 
+    function ensureVideoPreload(v) {
+      if (v && v.preload !== 'auto' && !(v.src && v.src.startsWith('blob:'))) {
+        try {
+          v.preload = 'auto';
+        } catch (_) {}
+      }
+    }
+
     for (const v of videos) {
       if (isPreviewVideoOrPage(v)) continue;
       const rect = v.getBoundingClientRect();
@@ -1412,6 +1449,7 @@
             y >= cRect.top &&
             y <= cRect.bottom
           ) {
+            ensureVideoPreload(v);
             return { video: v, rect: cRect, container: playerContainer };
           }
         }
@@ -1423,6 +1461,7 @@
           y >= rect.top - 4 &&
           y <= rect.bottom + 4
         ) {
+          ensureVideoPreload(v);
           return { video: v, rect, container: playerContainer };
         }
       }
@@ -1436,6 +1475,7 @@
           const rect = el.getBoundingClientRect();
           if (rect.width >= 160 && rect.height >= 120) {
             const playerContainer = el.closest('#movie_player, .html5-video-player, .bpx-player-container');
+            ensureVideoPreload(el);
             return { video: el, rect: (playerContainer ? playerContainer.getBoundingClientRect() : rect), container: playerContainer };
           }
         }
