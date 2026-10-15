@@ -68,20 +68,23 @@
 
 ### 一、智慧型 GPU 硬體解碼決策引擎 (Smart MediaCapabilities & Hardware Fallback)
 
-* **技術背景**：現代串流平台（如 YouTube）為節省伺服器頻寬，傾向優先推送高壓縮比的 AV1（`av01`）編碼串流。然而，大量現役個人電腦與筆電的集成顯卡或獨立顯示卡缺乏 AV1 硬體解碼專用單元（ASIC），若網頁一刀切強制封鎖或瀏覽器軟解，將導致老舊設備（如缺少 VP9 硬解之處理器）CPU 佔用飆升至 100%、散熱風扇狂轉、畫面嚴重掉幀。
+### 一、智慧型 GPU 硬體解碼決策引擎 (Smart MediaCapabilities & Hardware Fallback)
+
+* **技術背景**：現代串流平台（如 YouTube）為節省伺服器頻寬，傾向優先推送高壓縮比的 AV1（`av01`）編碼串流。然而，大量現役個人電腦與筆電的集成顯卡或獨立顯示卡缺乏 AV1 硬體解碼專用單元（ASIC），若瀏覽器軟解或錯誤封鎖核心編碼，將導致高 CPU 佔用、發熱掉幀，甚至因缺少可用串流而無法播放。
 * **運作機制 (`content/booster-injected.js`)**：
   * **MediaCapabilities API 深度攔截**：除了封裝 `MediaSource.isTypeSupported` 與 `canPlayType`，同步攔截 `navigator.mediaCapabilities.decodingInfo(configuration)`。
   * **ASIC 晶片能力智慧評估**：調用原生 `origDecodingInfo` 查詢底層硬體屬性：
     * 若硬體原生具備硬解（`powerEfficient: true`），放行高位元率 AV1 硬解播放；
     * 若底層需走高耗能 CPU 軟解（`powerEfficient: false`），則主動回傳 `{ supported: false, smooth: false, powerEfficient: false }`，促使平台安全降級推送具備硬解專用單元的 **VP9** 或 **AVC / H.264** 串流。
+    * **核心相容防線**：**絕對不阻斷 VP9 或 H.264**，確保 YouTube、Bilibili 等平台在任何硬體環境下皆能 100% 穩定取流播放。
 * **優化效益**：新舊設備自適應，徹底杜絕 CPU 軟解發熱掉幀，釋放運算資源，維持 60fps 滿幀流暢度。
 
 ### 二、ABR 階梯試探跳過與首選畫質直攻 (Adaptive Bitrate Fast-Locking)
 
 * **技術背景**：多數網頁播放器內建自我調整位元速率（Adaptive Bitrate, ABR）演算法，為防止播放初始卡頓，預設會從 360p 或 480p 的極低解析度開始試探網路頻寬，造成影片播放前數秒畫面顯著模糊。
 * **運作機制**：
-  * 深度對接播放器內部暴露之品質調控介面（如 YouTube 原生 API `setPlaybackQualityRange(target, target)`）。
-  * 依據使用者在設定中心預設之首選畫質（如 1080p、1440p 或 2160p 4K），於播放器初始化時直接鎖定最高與最低目標品質範圍。
+  * **安全畫質切換**：深度對接 YouTube 播放器官方 API，先調用 `getAvailableQualityLevels()` 動態校驗影片最高支援畫質，再透過 `setPlaybackQuality()` 鎖定最高清晰度。
+  * **杜絕死鎖與崩潰**：嚴格不調用易造成格式過濾死鎖的 `setPlaybackQualityRange(min, max)`，亦不向 `localStorage` 寫入非官方字串結構，內建自愈機制自動修復歷史異常資料。
   * 於 Hls.js 中配置 `abrEwmaDefaultEstimate: 8000000`（8 Mbps 初始頻寬估算）與 `startFragPrefetch: true`，促使播放器首影格即請求 1080p 高清切片。
 * **優化效益**：首影格載入即直達高清純淨畫面，免除數秒等待與畫面解析度突變造成的視覺不適。
 
@@ -99,8 +102,10 @@
 * **技術背景**：現代主流影音網站（包含多數 React/Vue SPA 站點）將 `hls.js`、`dashjs` 或 `shaka-player` 打包在模組閉包（Module Closure）內部，根本不會掛載到全域 `window.Hls`，導致傳統全域攔截手段全面失效。
 * **運作機制 (`content/booster-injected.js`)**：
   * 採用 JavaScript **原型鏈屬性守衛 (Prototype Chain Accessor Guard)**：透過 `Object.defineProperty(Object.prototype, 'maxBufferLength', ...)`，在全域物件原型上註冊 Getter 與 Setter。
+  * **非列舉與防凍結保護**：嚴格宣告 `enumerable: false`，杜絕 `for...in` 與 `Object.keys` 遍歷污染；實裝 `Object.isExtensible` 檢驗，遇 `Object.freeze` 或 `seal` 物件安全退出，不拋出任何 TypeError。
+  * **站點隔離防線**：加入 `isYouTube` 站點隔離防護，在 YouTube 等非 HLS 站點全面略過原型鏈注入，確保核心架構零干擾。
   * 當閉包內部的播放器工廠函數實例化配置物件時，只要讀取或寫入 `maxBufferLength`，即會觸發屬性守衛，自動將 `120s` 緩衝長度、`130MB` 記憶體池、`30s` 環形回收與 `startFragPrefetch` 靜默注入該閉包實例中。
-* **優化效益**：無論網站是全域掛載或是現代 Webpack/Vite 閉包打包，均能 100% 穿透並生效，達到真正的全網相容。
+* **優化效益**：無論網站是全域掛載或是現代 Webpack/Vite 閉包打包，均能 100% 穿透並生效，達到真正的全網相容與零副作用。
 
 ### 五、GPU DirectFlip / MPO 硬體直通層保護 (Zero Compositor Overhead)
 
@@ -168,7 +173,7 @@ ebrowse/
 │   ├── popup.css                 # 彈出介面樣式
 │   └── popup.js                  # 彈出卡片互動邏輯與快捷按鍵
 ├── scripts/
-│   ├── test-booster.mjs          # 影音加速、PotPlayer 與串流嗅探單元測試 (72 項)
+│   ├── test-booster.mjs          # 影音加速、PotPlayer 與串流嗅探單元測試 (79 項)
 │   ├── test-cleaner.mjs          # 網址正規化單元測試 (22 項)
 │   ├── test-formatter.mjs        # 格式化器單元測試 (14 項)
 │   ├── test-i18n.mjs             # 多語言對稱完整性單元測試 (14 項)
@@ -192,4 +197,4 @@ ebrowse/
 
 ---
 
-*Last updated / ?敺?? 2026-10-14 (v1.0.4)*
+*Last updated / ?敺?? 2026-10-15 (v1.0.5)*

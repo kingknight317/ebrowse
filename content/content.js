@@ -1413,7 +1413,8 @@
     }
 
     function ensureVideoPreload(v) {
-      if (v && v.preload !== 'auto' && !(v.src && v.src.startsWith('blob:'))) {
+      const isYT = /(?:^|\.)youtube\.com$|(?:^|\.)youtu\.be$/i.test(location.hostname);
+      if (!isYT && v && v.preload !== 'auto' && !(v.src && v.src.startsWith('blob:'))) {
         try {
           v.preload = 'auto';
         } catch (_) {}

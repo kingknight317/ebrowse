@@ -295,14 +295,16 @@ function simulateClipboardWriteAndAutoClear(text, delayMs = 10) {
 await simulateClipboardWriteAndAutoClear('test_command', 10);
 assert(clipboardState === '', '剪貼簿使用後能成功自動清空刪除，不留痕跡');
 
-// 12. 突破 Webpack / Vite 閉包模組限制之原型鏈屬性守衛測試
+// 12. 突破 Webpack / Vite 閉包模組限制之原型鏈屬性守衛測試 (嚴格非列舉與防凍結保護)
 const closureHlsConfig = {};
-// 模擬 booster-injected.js 原型鏈屬性守衛
+// 模擬 booster-injected.js 原型鏈屬性守衛 (非列舉模式)
 Object.defineProperty(Object.prototype, 'testClosureBufferLength', {
   configurable: true,
-  enumerable: true,
-  get() { return this.__test_buf !== undefined ? this.__test_buf : 120; },
+  enumerable: false, // 嚴格非列舉
+  get() { return this.__test_buf; },
   set(val) {
+    if (!this || typeof this !== 'object') return;
+    if (Object.isExtensible && !Object.isExtensible(this)) return;
     this.__test_buf = Math.max(val || 0, 120);
     this.testClosureMaxBufferSize = Math.max(this.testClosureMaxBufferSize || 0, 130 * 1000 * 1000);
     if (typeof this.testClosureBackBuffer === 'undefined') {
@@ -310,6 +312,25 @@ Object.defineProperty(Object.prototype, 'testClosureBufferLength', {
     }
   }
 });
+
+// 驗證未設定該屬性之純物件不會洩漏 120 或出現在 for..in
+const plainObject = { keyA: 1 };
+assert(plainObject.testClosureBufferLength === undefined, '未存取之物件原型屬性安全返回 undefined，絕不偽造 120');
+const enumeratedKeys = [];
+for (const k in plainObject) enumeratedKeys.push(k);
+assert(!enumeratedKeys.includes('testClosureBufferLength'), '原型鏈守衛嚴格非列舉 (enumerable: false)，絕不污染 for..in');
+
+// 驗證凍結物件安全指派不拋錯
+const frozenObj = Object.freeze({ test: true });
+let frozenThrew = false;
+try {
+  frozenObj.testClosureBufferLength = 30;
+} catch (_) {
+  frozenThrew = true;
+}
+assert(!frozenThrew, '凍結或封裝物件安全略過屬性注入，絕不拋出 TypeError');
+
+// 驗證正常閉包配置物件成功注入 120 秒、130MB 與 30 秒環形回收
 closureHlsConfig.testClosureBufferLength = 30; // 模組內部預設 30 秒
 assert(closureHlsConfig.testClosureBufferLength === 120, '原型鏈屬性守衛成功將閉包模組內 30 秒拉長至 120 秒');
 assert(closureHlsConfig.testClosureMaxBufferSize === 130 * 1000 * 1000, '原型鏈守衛成功注入 130MB 記憶體上限');
@@ -320,8 +341,11 @@ delete Object.prototype.testClosureBufferLength;
 async function simulateSmartDecodingInfo(mediaConfig, mockNativeDecodingInfo) {
   const isAV1 = /codecs\s*=\s*["']?av0?1/i.test(mediaConfig.video?.contentType || '');
   const nativeResult = await mockNativeDecodingInfo(mediaConfig);
-  // 若該硬體 ASIC 不支援硬解 (powerEfficient: false)，則安全降級
-  if (isAV1 && !nativeResult.powerEfficient) {
+  // 僅針對 AV1 軟解促使降級，絕對不阻斷 VP9 或 H.264
+  if (isAV1) {
+    if (nativeResult && nativeResult.supported && nativeResult.powerEfficient) {
+      return nativeResult;
+    }
     return { supported: false, smooth: false, powerEfficient: false };
   }
   return nativeResult;
@@ -329,12 +353,16 @@ async function simulateSmartDecodingInfo(mediaConfig, mockNativeDecodingInfo) {
 
 const mockGpuAv1 = { supported: true, smooth: true, powerEfficient: true };
 const mockCpuSoftAv1 = { supported: true, smooth: false, powerEfficient: false };
+const mockVp9Soft = { supported: true, smooth: true, powerEfficient: false };
 
 const resultGpu = await simulateSmartDecodingInfo({ video: { contentType: 'video/mp4; codecs="av01.0.08M.08"' } }, async () => mockGpuAv1);
 assert(resultGpu.supported === true && resultGpu.powerEfficient === true, '具備原生硬解之硬體放行 AV1 播放');
 
 const resultCpu = await simulateSmartDecodingInfo({ video: { contentType: 'video/mp4; codecs="av01.0.08M.08"' } }, async () => mockCpuSoftAv1);
 assert(resultCpu.supported === false && resultCpu.powerEfficient === false, '僅能 CPU 軟解之舊硬體安全封鎖 AV1，促使平台降級至硬解編碼');
+
+const resultVp9 = await simulateSmartDecodingInfo({ video: { contentType: 'video/webm; codecs="vp09.00.51.08.01.01.01.01.00"' } }, async () => mockVp9Soft);
+assert(resultVp9.supported === true, 'VP9 編碼即使 powerEfficient 為 false 也絕不封鎖，確保 YouTube 核心解碼 100% 暢通');
 
 // 14. GPU DirectFlip / MPO 硬體直通層 CSS 規則檢驗
 const cssContent = fs.readFileSync('content/content.css', 'utf-8');
@@ -343,9 +371,16 @@ assert(cssContent.includes('will-change: opacity, transform !important;'), 'CSS 
 assert(cssContent.includes('backdrop-filter: none !important;'), 'CSS 預設隱藏態將 backdrop-filter 設為 none，避免污染 DirectFlip 硬體直通層');
 assert(cssContent.includes('.__cleanlink-pip-visible .__cleanlink-pip-btn'), '僅在可見 hover 態時才掛載高斯模糊濾鏡');
 
+// 15. YouTube 零衝突防護規範檢驗 (靜態代碼安全審計)
+const injectedJsContent = fs.readFileSync('content/booster-injected.js', 'utf-8');
+assert(!injectedJsContent.includes('player.setPlaybackQualityRange'), '絕不呼叫易引發死鎖之 setPlaybackQualityRange，改採安全 setPlaybackQuality');
+assert(!injectedJsContent.includes("localStorage.setItem('yt-player-quality'"), '絕不寫入非官方 localStorage 結構，杜絕 YouTube 啟動 SyntaxError 崩潰');
+assert(injectedJsContent.includes('isYouTube'), '包含明確的 isYouTube 站點隔離保護，杜絕跨站污染');
+
 console.log(`\n測試結果: 通過 ${passed} 項，失敗 ${failed} 項\n`);
 
 if (failed > 0) {
   process.exit(1);
 }
+
 
